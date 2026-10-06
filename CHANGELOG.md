@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.8.1
+
+- Caméras : nouvelle icône (caméra sur son support, objectif, champ de vision qui balaie, voyant d'enregistrement) en bleu quand elle fonctionne. Une caméra « idle » dans Home Assistant est en marche : elle s'affiche « En ligne » (ou « Enregistre », « En direct ») au lieu de « En veille ».
+- Température : couleur continue selon la valeur (bleu glacé, bleu, turquoise, vert, jaune, orange, rouge), appliquée au thermomètre, à la pastille et au chiffre ; même principe pour l'humidité.
+- Guirlandes allumées : halo lumineux diffus, scintillement des ampoules par couleur et filament blanc ; éteintes, les ampoules sont ternes.
+- Pluviomètre plus lisible : nuage et bocal contrastés, gouttes plus grandes, niveau visible dès quelques millimètres (bocal plein vers 30 mm), pastille teintée en bleu quand il a plu.
+
 ## 1.8.0
 
 - Nouveaux meubles : escalier droit et escalier quart tournant (pour les maisons à étage), voiture et vélo (pour le garage). 77 meubles au catalogue.

@@ -36,7 +36,7 @@ export const ICONS = {
 
   /* ---------- sécurité ---------- */
   motion: ["Présence", I("motion", `${waves(14.5, 12, "#e5484d", 3, 3.4, 3)}<g class="walk"><circle cx="7.5" cy="4.3" r="2.3" fill="#ffb27a" stroke="${K}" stroke-width="1"/>${ln("M7.5 7.6v6.6M7.5 14.2l-2.6 7.3M7.5 14.2l3 7.3M4.1 11.2l3.4-2.4 3.3 2.4", 1.6)}</g>`)],
-  camera: ["Caméra", I("camera", `<g class="cam"><path class="fx scan" d="M17.6 8.4L24 4.2v12.6z" fill="#e5484d" fill-opacity=".22"/><path d="M2.5 7.5l13-3.6 1.9 6.8-13 3.6z" fill="#f4f6f8" stroke="${K}" stroke-width="1.2" stroke-linejoin="round"/><path d="M15.6 6.6l4.9-1.4v6.2l-3.6 1" fill="#3b4148" stroke="${K}" stroke-width="1" stroke-linejoin="round"/><circle cx="18.6" cy="8.5" r="1.3" fill="#5aa0ff" stroke="#1c2730" stroke-width=".5"/><circle class="rec" cx="5.8" cy="9.6" r="1.1" fill="#9aa3ab"/></g>${ln("M9.5 13.3l1 4.2M6 21.6h9M10.5 17.5v4")}`)],
+  camera: ["Caméra", I("camera", `<rect x="1.6" y="17.6" width="6.6" height="4.6" rx="1.2" fill="#d9dee3" stroke="${K}" stroke-width="1.1"/><path d="M4.9 17.6v-3.4h3.4" fill="none" stroke="${K}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><g class="cam"><path class="fx scan" d="M18.8 9.6L24.6 4.8v10.4z" fill="#5aa0ff" fill-opacity=".28"/><path d="M5.4 5.6h10.8a3 3 0 0 1 3 3v3.6a3 3 0 0 1-3 3H8.4a3 3 0 0 1-3-3z" fill="#f7f9fb" stroke="${K}" stroke-width="1.2" stroke-linejoin="round"/><path d="M4.2 5.2h13.4a3.4 3.4 0 0 1 3.1 2.1H6.6" fill="#3b4148" stroke="${K}" stroke-width=".9" stroke-linejoin="round"/><rect x="15.6" y="7.6" width="4.4" height="5.6" rx="2" fill="#2b3138"/><circle cx="18" cy="10.4" r="2" fill="#141a20"/><circle cx="18" cy="10.4" r="1.25" fill="#3d8bfd"/><circle cx="17.5" cy="9.9" r=".42" fill="#fff"/><circle class="rec" cx="8.2" cy="10.4" r="1.05" fill="#9aa3ab"/><path d="M10.2 12.4h4" stroke="#c9d1d9" stroke-width=".9" stroke-linecap="round"/></g>`)],
   shield: ["Alarme", I("shield", `<circle class="fx ring r1" cx="12" cy="12" r="10.5" fill="none" stroke="#e5484d" stroke-width="1.4"/><circle class="fx ring r2" cx="12" cy="12" r="10.5" fill="none" stroke="#e5484d" stroke-width="1.4"/><path d="M12 2l8 3v6c0 5-3.4 8.8-8 11-4.6-2.2-8-6-8-11V5z" fill="#ffe1e1" stroke="${K}" stroke-width="1.25" stroke-linejoin="round"/><path class="lit shc" d="M12 4.2l5.8 2.2v4.6c0 3.8-2.4 6.7-5.8 8.5z" fill="#ffb3b3"/>${ln("M8.5 12l2.5 2.5 4.5-5", 1.6)}`)],
   lock: ["Serrure", I("lock", `<path class="shk" d="M7.5 11V7.5a4.5 4.5 0 0 1 9 0V11" fill="none" stroke="${K}" stroke-width="1.8" stroke-linecap="round"/><rect x="4.5" y="10.5" width="15" height="11.5" rx="2.4" fill="#f6c84c" stroke="${K}" stroke-width="1.25"/><rect x="5.6" y="11.6" width="12.8" height="2" rx="1" fill="#fff" fill-opacity=".45"/><circle cx="12" cy="15.8" r="1.5" fill="${K}"/>${ln("M12 16.6v2.4", 1.4)}<g class="fx spk">${ln("M20.5 3.5v2.4M19.3 4.7h2.4", 1, "#f5b301")}</g>`)],
   doorbell: ["Sonnette", I("doorbell", `${waves(16.5, 12, "#e5484d", 2, 3.2, 2.8)}<rect x="4" y="2" width="9.5" height="20" rx="4.6" fill="#f4f6f8" stroke="${K}" stroke-width="1.25"/><circle class="lit btnb" cx="8.75" cy="14.5" r="3" fill="#dfe5ea" stroke="${K}" stroke-width=".9"/><g class="bell"><path d="M8.75 4.8c-1.6 0-2.4 1.2-2.4 2.6v1.6l-.8 1h6.4l-.8-1V7.4c0-1.4-.8-2.6-2.4-2.6z" fill="#f6c84c" stroke="${K}" stroke-width=".7"/></g>`)],
@@ -91,6 +91,7 @@ const FAM = {
 };
 export const ACCENT = {};
 Object.values(FAM).forEach((l) => { const c = l[l.length - 1]; l.slice(0, -1).forEach((k) => (ACCENT[k] = c)); });
+ACCENT.camera = "#3d8bfd"; // caméra en marche : bleu (le rouge évoquait une alerte)
 
 export const ALWAYS = { camera: 1, server: 1, router: 1, zigbee: 1 };
 
@@ -129,7 +130,7 @@ ${A} .bat{animation:pmfill 2.4s ease-in-out infinite;transform-origin:0 50%}${A}
 .ico .sl{transform-box:view-box;transform-origin:12px 4px;transition:transform .7s}${A} .sl{transform:scaleY(.28)}
 .ico .gd{transform-box:view-box;transform-origin:12px 11px;transition:transform .8s}${A} .gd{transform:scaleY(.3)}
 ${A} .walk{animation:pmbob .7s ease-in-out infinite alternate}${A} .wv{animation:pmwave 1.6s ease-out infinite}.ico .w2{animation-delay:.3s!important}.ico .w3{animation-delay:.6s!important}
-.ico .cam{transform-box:view-box;transform-origin:10px 12px}${A} .cam{animation:pmpan 6s ease-in-out infinite}.ico .rec{transition:fill .3s}${A} .rec{fill:#e5484d;animation:pmtw 1s steps(2) infinite}
+.ico .cam{transform-box:view-box;transform-origin:8.3px 14.2px}${A} .cam{animation:pmpan 6s ease-in-out infinite}.ico .rec{transition:fill .3s}${A} .rec{fill:#e5484d;animation:pmtw 1s steps(2) infinite}
 ${A} .ring{animation:pmring 2s ease-out infinite}.ico .r2{animation-delay:1s!important}${A} .shc{fill:#ff8a8a}
 .ico .shk{transform-box:view-box;transition:transform .5s;transform:translateY(-2.4px)}${A} .shk{transform:none}${A} .spk{animation:pmtw 1.2s ease-in-out infinite}
 ${A} .btnb{fill:#ffd34d}${A} .bell{animation:pmring2 .5s ease-in-out infinite alternate;transform-origin:50% 0}

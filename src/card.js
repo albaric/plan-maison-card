@@ -9,7 +9,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.8.0";
+export const VERSION = "1.8.1";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -21,7 +21,18 @@ const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-
 const slug = (s) => String(s || "plan").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 const fr = (n, d) => (d == null ? String(Math.round(n * 100) / 100) : n.toFixed(d)).replace(".", ",");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const tempColor = (t) => (t == null || isNaN(t) ? "#f5a524" : t < 5 ? "#3e7bfa" : t < 15 ? "#2bb3a3" : t < 25 ? "#f5a524" : t < 32 ? "#f07a2c" : "#e5484d");
+// Couleur continue selon la température : bleu glacé → bleu → turquoise → vert → jaune → orange → rouge
+const T_STOPS = [[-5, "#5b5fe0"], [3, "#3e7bfa"], [10, "#1fb5c4"], [16, "#35b46b"], [21, "#e6b422"], [26, "#f08a2c"], [32, "#e5484d"], [38, "#b4235a"]];
+const tempColor = (t) => {
+  if (t == null || isNaN(t)) return "#f5a524";
+  const h = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  if (t <= T_STOPS[0][0]) return T_STOPS[0][1];
+  for (let i = 1; i < T_STOPS.length; i++) if (t <= T_STOPS[i][0]) {
+    const [t0, c0] = T_STOPS[i - 1], [t1, c1] = T_STOPS[i], k = (t - t0) / (t1 - t0), a = h(c0), b = h(c1);
+    return "#" + a.map((v, j) => Math.round(v + (b[j] - v) * k).toString(16).padStart(2, "0")).join("");
+  }
+  return T_STOPS[T_STOPS.length - 1][1];
+};
 const DC_COLOR = { temperature: "temperature", humidity: "#3e7bfa", pressure: "#8e6bd8", atmospheric_pressure: "#8e6bd8", precipitation: "#2bb3a3", precipitation_intensity: "#2bb3a3", wind_speed: "#5aa0ff", battery: "#30a46c", illuminance: "#f5a524", power: "#f07a2c", energy: "#f07a2c" };
 const DC_ICON = { temperature: "mdi:thermometer", humidity: "mdi:water-percent", pressure: "mdi:gauge", atmospheric_pressure: "mdi:gauge", precipitation: "mdi:weather-rainy", precipitation_intensity: "mdi:weather-pouring", wind_speed: "mdi:weather-windy", battery: "mdi:battery", illuminance: "mdi:brightness-5", power: "mdi:flash", energy: "mdi:lightning-bolt" };
 
@@ -284,6 +295,9 @@ class PlanMaisonCard extends HTMLElement {
       if (v != null && ((w.above != null && v > w.above) || (w.below != null && v < w.below))) return { c: "warn", t: (w.prefix || "") + this._fmt(this._hass.states[e]) };
     }
     if (d.kind === "l" || d.kind === "w" || d.val) return { c: "ok", t: this._fmt(st) };
+    if (d.entity.split(".")[0] === "camera") { // « idle » = caméra en marche, simplement sans enregistrement en cours
+      return { c: "ok", t: s === "recording" ? "Enregistre" : s === "streaming" ? "En direct" : "En ligne" };
+    }
     if (d.entity.split(".")[0] === "binary_sensor") {
       const dc = st.attributes.device_class, on = s === "on", door = ["door", "window", "opening", "garage_door"].includes(dc), occ = ["occupancy", "motion", "presence"].includes(dc);
       return { c: on ? "on" : "off", t: on ? (door ? "Ouverte" : occ ? "Présence" : "Actif") : door ? "Fermée" : "Calme" };
@@ -321,7 +335,7 @@ class PlanMaisonCard extends HTMLElement {
     const defs = el("defs", {}, s);
     const pat = el("pattern", { id: "pmh", width: 3, height: 3, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
     el("rect", { width: 3, height: 3, class: "hb" }, pat); el("line", { x1: 0, y1: 0, x2: 0, y2: 3, class: "hl" }, pat);
-    el("feGaussianBlur", { stdDeviation: 0.8 }, el("filter", { id: "pmb" }, defs));
+    el("feGaussianBlur", { stdDeviation: 0.8 }, el("filter", { id: "pmb" }, defs)); el("feGaussianBlur", { stdDeviation: 2.2 }, el("filter", { id: "pmb2", x: "-30%", y: "-60%", width: "160%", height: "220%" }, defs));
     const lw = el("pattern", { id: "pml", width: 24, height: 24, patternUnits: "userSpaceOnUse", patternTransform: "rotate(-18)" }, defs); el("rect", { width: 12, height: 24, class: "lawn-a" }, lw);
     const tf = el("pattern", { id: "pmg", width: 7, height: 7, patternUnits: "userSpaceOnUse" }, defs); el("path", { d: "M1 6l.5-1.6M1.6 6l.1-1.8M2.2 6l-.4-1.5M4.6 3l.5-1.5M5.2 3l.1-1.7", class: "tuft" }, tf);
     const rg = el("radialGradient", { id: "pmt", cx: 0.38, cy: 0.34, r: 0.7 }, defs); el("stop", { offset: 0, class: "hi0" }, rg); el("stop", { offset: 0.55, class: "hi1" }, rg); el("stop", { offset: 1, class: "hi2" }, rg);
@@ -457,9 +471,12 @@ class PlanMaisonCard extends HTMLElement {
       (this._lg[l.entity] = this._lg[l.entity] || []).push(gg);
       const st = this._hass.states[l.entity];
       el("title", {}, gg).textContent = (l.name || (st && st.attributes.friendly_name) || l.entity || "Guirlande") + (l.entity ? " · clic pour allumer ou éteindre" : " · à relier à un interrupteur dans l'éditeur");
+      const warm = cols.length === 1;
+      el("path", { d, class: "halo", stroke: warm ? cols[0] : "#ffe3a3", "stroke-width": w * 9, "stroke-linecap": "round", fill: "none" }, gg);   // lumière diffuse autour de la guirlande
       el("path", { d, class: "cable" }, gg);
-      cols.forEach((c, i) => el("path", { d, class: "glow", stroke: c, "stroke-width": w * 2.4, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
-      cols.forEach((c, i) => el("path", { d, stroke: c, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
+      cols.forEach((c, i) => el("path", { d, class: "glow g" + (i % 4), stroke: c, "stroke-width": w * 3.2, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
+      cols.forEach((c, i) => el("path", { d, class: "bulb g" + (i % 4), stroke: c, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
+      el("path", { d, class: "core", stroke: "#fffbe8", "stroke-width": w * 0.42, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp, fill: "none" }, gg);   // filament blanc des ampoules allumées
       el("path", { d, class: "hit" }, gg);
       gg.onclick = (e) => { e.stopPropagation(); if (this._mode === "view" && l.entity) this._tap({ entity: l.entity, kind: "t" }); };
     });
@@ -579,7 +596,8 @@ class PlanMaisonCard extends HTMLElement {
     if (d.wg === "baro") s.setProperty("--ang", cl(-90, 90, ((v == null ? 1013 : u === "inHg" ? v * 33.8639 : v) - 1013) * 2.25).toFixed(1) + "deg");
     if (d.wg === "rain") {
       const ri = (d.intensity && this._num(d.intensity)) || 0;
-      s.setProperty("--lvl", cl(0, 1, (v || 0) / 20).toFixed(3)); s.setProperty("--rain", ri > 0 ? "running" : "paused"); m.classList.toggle("raining", ri > 0);
+      const mm = v || 0; // échelle racine : quelques millimètres restent visibles, le bocal est plein vers 30 mm
+      s.setProperty("--lvl", (mm > 0 ? cl(0.08, 1, Math.sqrt(mm / 30)) : 0).toFixed(3)); s.setProperty("--rain", ri > 0 ? "running" : "paused"); m.classList.toggle("raining", ri > 0); m.classList.toggle("wet", mm > 0);
     }
   }
   _act(m, d, s) {
