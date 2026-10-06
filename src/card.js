@@ -9,7 +9,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.5.2";
+export const VERSION = "1.5.3";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -231,8 +231,9 @@ class PlanMaisonCard extends HTMLElement {
     const wg = d.widget === false ? null : widgetType(st, d.entity);
     const ov = this._L.icons[d.id], chosen = !!ov || (!!d.icon && (!!ICONS[d.icon] || /^mdi:/.test(d.icon)));
     const unit = dom === "sensor" && !!st && !!st.attributes.unit_of_measurement;
-    // une icône choisie (éditeur ou carte) l'emporte sur l'affichage automatique en valeur ; la valeur reste en pastille
-    if (!kind) kind = TOGGLE.includes(dom) ? "t" : unit && !chosen ? "l" : "i";
+    // une icône choisie (éditeur ou carte) l'emporte sur l'affichage automatique en valeur, la valeur restant en pastille ;
+    // les widgets météo (température, vent, pluie, pression) restent prioritaires (widget: false pour afficher l'icône)
+    if (!kind) kind = TOGGLE.includes(dom) ? "t" : unit && (!chosen || wg) ? "l" : "i";
     if (kind === "l" && wg) kind = "w";
     let ik = ov || (d.icon && ICONS[d.icon] ? d.icon : null), mdi = null;
     if (!ik && d.icon && /^mdi:/.test(d.icon)) mdi = d.icon;
@@ -660,7 +661,7 @@ class PlanMaisonCard extends HTMLElement {
     pop.style.left = l + "px"; pop.style.top = t + "px";
   }
   _devPop(d) {
-    const pop = this._pop, pick = true, asVal = d.kind === "w" || d.kind === "l", ov = !!this._L.icons[d.id];
+    const pop = this._pop, pick = d.kind !== "w", asVal = d.kind === "l", ov = !!this._L.icons[d.id];
     pop.classList.remove("xl"); pop.classList.toggle("wide", pick);
     pop.innerHTML = `<div><div class="t">${esc(this._nm(d))}</div><div class="s" title="${esc(d.entity)}">${esc(describe(this._hass, d.entity))}</div></div>` +
       (pick ? `<div class="s">${asVal ? "Affiché en valeur. Touche une icône pour afficher l'icône animée (la valeur reste en pastille)" : `Icône animée${ov ? "" : " (choisie automatiquement)"} : touche pour changer`}</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${d.ik === k && !d.mdi ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>` : "") +

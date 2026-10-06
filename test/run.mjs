@@ -21,14 +21,19 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
     const cfg = { title: "T", rooms: [{ name: "A", rect: [0, 0, 4, 4] }], devices: [
       { id: "a", entity: "sensor.serveur_memoire", icon: "solar", x: 1, y: 1 },
       { id: "b", entity: "sensor.serveur_memoire", x: 3, y: 1 },
-      { id: "c", entity: "sensor.serveur_memoire", icon: "server", kind: "value", x: 2, y: 3 }] };
+      { id: "c", entity: "sensor.serveur_memoire", icon: "server", kind: "value", x: 2, y: 3 },
+      { id: "d", entity: "sensor.station_meteo_temperature", icon: "thermostat", x: 1, y: 3 },
+      { id: "e", entity: "sensor.anemometre_vitesse_moyenne", x: 3, y: 3 }] };
     card.setConfig(cfg); await new Promise((r) => setTimeout(r, 400));
     const m = (id) => { const e = card._mk[id].el; return { ico: !!e.querySelector("svg.ico"), lab: e.classList.contains("lab"), vb: (e.querySelector(".vb") || {}).textContent || "", txt: e.textContent }; };
-    return { a: m("a"), b: m("b"), c: m("c") };
+    card._L.icons.e = "fan"; card._build(); await new Promise((r) => setTimeout(r, 300));
+    const w = (id) => card._mk[id].el.classList.contains("wg");
+    return { a: m("a"), b: m("b"), c: m("c"), d: w("d"), e: w("e") };
   });
   check("icône choisie sur un capteur : icône + valeur", r.a.ico && !r.a.lab && /93/.test(r.a.vb), r.a);
   check("capteur sans icône choisie : valeur seule", !r.b.ico && r.b.lab && /93/.test(r.b.txt), r.b);
   check("kind: value explicite respecté", r.c.lab && !r.c.ico, r.c);
+  check("widgets météo conservés malgré une icône enregistrée", r.d && r.e, { d: r.d, e: r.e });
   await p.screenshot({ path: `${OUT}/valeur_icone.png` });
   check("valeur/icône : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();

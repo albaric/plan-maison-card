@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 1.5.3
+
+- Correction de la 1.5.2 : les widgets météo (température, vent, pluie, pression) redevenaient de simples icônes quand une icône leur était associée. Ils restent prioritaires ; `widget: false` permet d'afficher l'icône à la place.
+
 ## 1.5.2
 
 - Un capteur avec unité (onduleur, puissance, mémoire…) dont on a choisi l'icône affiche désormais cette icône animée sur le plan, avec la valeur dans une pastille dessous. Avant, l'icône choisie dans l'éditeur était ignorée et seule la valeur s'affichait.

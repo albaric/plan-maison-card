@@ -183,7 +183,7 @@ Un clic sur la guirlande allume ou éteint l'entité.
 | `name` | Nom affiché (par défaut : `friendly_name`). |
 | `x`, `y` | Position. Sans position, l'équipement attend dans la case « À placer ». |
 | `icon` | Icône animée de la bibliothèque (voir plus bas) ou icône `mdi:…` statique. Par défaut, elle est devinée. |
-| `kind` | `toggle` (clic = allumer/éteindre), `info` (clic = fiche), `value` (valeur affichée), `widget`. Par défaut : `toggle` pour light/switch/input_boolean/fan, `value` pour un capteur avec unité, sinon `info`. Si tu choisis une icône pour un capteur avec unité, l'icône s'affiche avec sa valeur en pastille (sauf `kind: value` explicite). |
+| `kind` | `toggle` (clic = allumer/éteindre), `info` (clic = fiche), `value` (valeur affichée), `widget`. Par défaut : `toggle` pour light/switch/input_boolean/fan, `value` pour un capteur avec unité, sinon `info`. Si tu choisis une icône pour un capteur avec unité, l'icône s'affiche avec sa valeur en pastille (sauf `kind: value` explicite, et sauf pour les widgets météo : ajoute `widget: false` pour leur préférer l'icône). |
 | `widget` | `false` affiche la valeur brute au lieu du widget animé. |
 | `warn` | `{entity, above, below, prefix}` : pastille « à surveiller » quand la valeur dépasse un seuil. |
 | `gust` | Anémomètre : capteur de rafales (traînées de vent au-delà de 15 km/h). |
