@@ -38,6 +38,24 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   check("valeur/icône : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // carte étroite (colonne de tableau de bord) : la pièce touchée s'ouvre en fiche sur le plan ; humidité en goutte
+  const p = await b.newPage({ viewport: { width: 520, height: 1000 } });
+  const errs = []; p.on("pageerror", (e) => errs.push(e.message));
+  await p.goto(`${BASE}?cfg=complete`); await p.waitForTimeout(900);
+  const c = p.locator("plan-maison-card");
+  const hum = await c.evaluate((el) => !!el.shadowRoot.querySelector(".mk.wg-hum"));
+  check("humidité affichée en goutte animée", hum);
+  const pt = await c.evaluate((el) => { for (const pg of el.shadowRoot.querySelectorAll("polygon.room")) { const b = pg.getBoundingClientRect(); for (let i = 1; i < 8; i++) for (let j = 1; j < 8; j++) { const x = b.x + b.width * i / 8, y = b.y + b.height * j / 8; if (el.shadowRoot.elementFromPoint(x, y) === pg) return [x, y]; } } return null; });
+  await p.mouse.click(pt[0], pt[1]); await p.waitForTimeout(300);
+  const r = await c.evaluate((el) => ({ open: !el._pop.hidden && !!el._pop.querySelector(".sheet h2"), focus: el._focus }));
+  check("étroit : fiche de la pièce ouverte sur le plan", r.open && !!r.focus, r);
+  await p.screenshot({ path: `${OUT}/etroit_piece.png` });
+  await c.evaluate((el) => el._pop.querySelector("#pm-x").click()); await p.waitForTimeout(150);
+  const r2 = await c.evaluate((el) => ({ hidden: el._pop.hidden, focus: el._focus }));
+  check("étroit : fiche fermée, retour à la vue d'ensemble", r2.hidden && !r2.focus, r2);
+  check("étroit : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

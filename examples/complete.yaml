@@ -168,6 +168,7 @@ devices:
   - {id: mr1, entity: sensor.passerelle_radio_temperature, name: "Passerelle radio", icon: zigbee, x: 8.45, y: 2.6, kind: info, warn: {above: 70}}
   - {id: imprimante, entity: device_tracker.imprimante, name: "Imprimante", icon: printer, x: 9.9, y: 1.2, kind: info}
   - {id: th_sdb, entity: sensor.salle_de_bain_temperature, name: "Capteur salle de bain", x: 8.6, y: 8.4}
+  - {id: hu_sdb, entity: sensor.salle_de_bain_humidite, name: "Humidité salle de bain", x: 8.6, y: 7.2}
   - {id: thermostat, entity: climate.salle_de_bain, name: "Chauffage salle de bain", icon: radiator, x: 9.5, y: 9.2, kind: info}
   - {id: lum_pergola, entity: switch.guirlande_pergola, name: "Guirlande pergola", icon: string, x: -1.5, y: 0.4, kind: toggle}
   - {id: lum_salon_jardin, entity: switch.eclairage_salon_jardin, name: "Salon de jardin", icon: flood, x: -1.5, y: 6.6, kind: toggle}

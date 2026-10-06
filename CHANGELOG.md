@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 1.6.0
+
+- Nouveau widget humidité : une goutte qui se remplit selon le taux d'humidité, avec une vague animée, une couleur qui va de l'orange (air sec) au bleu profond (air humide) et des bulles au-delà de 65 %. Il s'applique automatiquement aux capteurs d'humidité.
+- Carte étroite (colonne d'un tableau de bord en sections, téléphone) : le panneau « Vue d'ensemble » passe sous le plan, hors de vue. Toucher une pièce ou une zone ouvre maintenant sa fiche directement sur le plan (relevés, équipements avec leurs interrupteurs) ; « Fermer » revient à la vue d'ensemble. En largeur normale, le panneau latéral se met à jour comme avant.
+- Relevés du panneau : une lecture seule occupe toute la largeur.
+
 ## 1.5.3
 
 - Correction de la 1.5.2 : les widgets météo (température, vent, pluie, pression) redevenaient de simples icônes quand une icône leur était associée. Ils restent prioritaires ; `widget: false` permet d'afficher l'icône à la place.

@@ -9,14 +9,14 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.5.3";
+export const VERSION = "1.6.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
 const NA = ["unavailable", "unknown"];
 const KIND = { toggle: "t", info: "i", value: "l", widget: "w", t: "t", i: "i", l: "l", w: "w" };
 const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
-.err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
+.err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
 
 const slug = (s) => String(s || "plan").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 const fr = (n, d) => (d == null ? String(Math.round(n * 100) / 100) : n.toFixed(d)).replace(".", ",");
@@ -26,6 +26,7 @@ const DC_COLOR = { temperature: "temperature", humidity: "#3e7bfa", pressure: "#
 const DC_ICON = { temperature: "mdi:thermometer", humidity: "mdi:water-percent", pressure: "mdi:gauge", atmospheric_pressure: "mdi:gauge", precipitation: "mdi:weather-rainy", precipitation_intensity: "mdi:weather-pouring", wind_speed: "mdi:weather-windy", battery: "mdi:battery", illuminance: "mdi:brightness-5", power: "mdi:flash", energy: "mdi:lightning-bolt" };
 
 /** Type de widget animé pour un capteur, d'après sa classe ou son unité. */
+function humColor(h) { return h < 30 ? "#e3a03a" : h < 40 ? "#6cc1b5" : h <= 60 ? "#3fa7e0" : h <= 70 ? "#2f86d6" : "#2a5fc4"; }
 function widgetType(st, entity) {
   if (!st || entity.split(".")[0] !== "sensor") return null;
   const a = st.attributes || {}, dc = a.device_class || "", u = a.unit_of_measurement || "", id = entity.toLowerCase();
@@ -33,6 +34,7 @@ function widgetType(st, entity) {
   if (dc === "wind_speed" || (/km\/h|m\/s|mph|kn/.test(u) && /vent|wind|anemo/.test(id))) return "wind";
   if (dc === "precipitation" || dc === "precipitation_intensity" || (/^(mm|in)(\/h)?$/.test(u) && /pluie|rain|pluvio/.test(id))) return "rain";
   if (dc === "pressure" || dc === "atmospheric_pressure" || /^(hPa|mbar|inHg)$/.test(u)) return "baro";
+  if (dc === "humidity" || (u === "%" && /humid|hygro/.test(id))) return "hum";
   return null;
 }
 
@@ -321,7 +323,30 @@ class PlanMaisonCard extends HTMLElement {
     if (this._mode === "walls") this._handles(el("g", {}, s));
     this._overlay(); this._states();
   }
-  _pick(id) { if (this._mode !== "view") return; this._focus = this._focus === id ? null : id; this._build(); this._panel(); }
+  _pick(id, ev) { if (this._mode !== "view") return; this._focus = this._focus === id ? null : id; this._build(); this._panel(); this._sheet(ev); }
+  /** Carte étroite (colonne de tableau de bord, téléphone) : le panneau passe sous le plan, hors de vue.
+   *  On montre alors le contenu de la pièce dans une fiche posée sur le plan, près de l'endroit touché. */
+  _stacked() { const p = this.$("panel"), s = this._stage; return !!p && !!s && p.offsetParent !== null && p.getBoundingClientRect().top >= s.getBoundingClientRect().bottom - 2; }
+  _sheet(ev) {
+    const pop = this._pop, open = !pop.hidden && !!pop.querySelector(".sheet");
+    if (!this._focus || this._mode !== "view" || !this._stacked()) { if (open) pop.hidden = true; return; }
+    if (!ev && !open) return; // simple rafraîchissement : seulement si la fiche est déjà ouverte
+    const p = this.$("panel");
+    pop.classList.remove("xl"); pop.classList.add("wide");
+    pop.innerHTML = `<div class="sheet">${p.innerHTML}</div><div class="row"><button class="btn" id="pm-x">Fermer</button></div>`;
+    const back = pop.querySelector("#back"); if (back) back.remove();
+    this._wire(pop);
+    pop.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => this._sheet({ keep: true })));
+    pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; this._focus = null; this._build(); this._panel(); };
+    if (!ev || ev.keep) return; // position inchangée
+    pop.hidden = false;
+    const sr = this._stage.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    const x = (ev.clientX ?? sr.left + sr.width / 2) - sr.left, y = (ev.clientY ?? sr.top + sr.height / 2) - sr.top;
+    let l = Math.max(8, Math.min(sr.width - w - 8, x - w / 2)), t = y + 14;
+    if (t + h > sr.height - 4) t = y - h - 14;
+    if (t < 4) t = Math.max(4, Math.min(sr.height - h - 4, 4));
+    pop.style.left = l + "px"; pop.style.top = t + "px";
+  }
   _autoTrees() {
     if (this._trees) return this._trees;
     const v = this._view, m = this._model, out = [];
@@ -337,7 +362,7 @@ class PlanMaisonCard extends HTMLElement {
     const el = this._el.bind(this), m = this._model, f = this._focus, V = this._view;
     this._labels();
     const garden = el("rect", { x: V[0], y: V[1], width: V[2], height: V[3], class: "garden" + (f === "jardin" ? " sel" : "") }, g);
-    garden.onclick = () => this._pick("jardin");
+    garden.onclick = (e) => this._pick("jardin", e);
     if (m.garden) {
       if (m.garden.label) el("text", { x: V[0] + 6, y: V[1] + 10, class: "glab", "font-size": 3.4 }, g).textContent = m.garden.label;
       el("rect", { x: V[0], y: V[1], width: V[2], height: V[3], fill: "url(#pml)", class: "deco" }, g);
@@ -356,7 +381,7 @@ class PlanMaisonCard extends HTMLElement {
     m.zones.forEach((z) => {
       const [x1, y1, x2, y2] = z.rect, w = x2 - x1, h = y2 - y1;
       const zg = el("g", { class: (z.type === "shed" ? "shed" : "zone") + (f === z.id ? " sel" : "") }, g);
-      zg.onclick = (e) => { e.stopPropagation(); this._pick(z.id); };
+      zg.onclick = (e) => { e.stopPropagation(); this._pick(z.id, e); };
       if (z.type === "shed") {
         el("rect", { x: x1, y: y1, width: w, height: h, class: "box" }, zg);
         el("path", { d: `M${x1} ${y1}L${x2} ${y2}M${x2} ${y1}L${x1} ${y2}`, class: "l" }, zg);
@@ -375,7 +400,7 @@ class PlanMaisonCard extends HTMLElement {
     const D = this._dock(), dk = el("g", { class: "dock" }, g);
     el("rect", { x: D.x, y: D.y, width: D.w, height: D.h }, dk);
     el("text", { x: D.x + 2, y: D.y + 3.6, class: "glab", "font-size": 2.4 }, dk).textContent = "À placer";
-    m.rooms.forEach((r) => { el("polygon", { points: this._P[r.id].map((p) => p.join(",")).join(" "), class: "room " + r.kind + (f === r.id ? " sel" : "") }, g).onclick = (e) => { e.stopPropagation(); this._pick(r.id); }; });
+    m.rooms.forEach((r) => { el("polygon", { points: this._P[r.id].map((p) => p.join(",")).join(" "), class: "room " + r.kind + (f === r.id ? " sel" : "") }, g).onclick = (e) => { e.stopPropagation(); this._pick(r.id, e); }; });
     if (this.$("showfurn").checked) {
       const fg = el("g", {}, g);
       this._furn().forEach((it) => {
@@ -537,6 +562,10 @@ class PlanMaisonCard extends HTMLElement {
       const w = v || 0, gu = (d.gust && this._num(d.gust)) || w;
       s.setProperty("--spd", cl(0.18, 6, 9 / Math.max(w, 0.1)).toFixed(2) + "s"); s.setProperty("--play", w < 0.5 ? "paused" : "running"); s.setProperty("--gust", gu >= 15 ? 1 : w >= 6 ? 0.55 : 0);
     }
+    if (d.wg === "hum") {
+      const h = cl(0, 100, v == null ? 50 : v);
+      s.setProperty("--hy", (28.4 - (h / 100) * 25.2).toFixed(2) + "px"); s.setProperty("--hc", humColor(h)); s.setProperty("--bub", h >= 65 ? "running" : "paused");
+    }
     if (d.wg === "baro") s.setProperty("--ang", cl(-90, 90, ((v == null ? 1013 : u === "inHg" ? v * 33.8639 : v) - 1013) * 2.25).toFixed(1) + "deg");
     if (d.wg === "rain") {
       const ri = (d.intensity && this._num(d.intensity)) || 0;
@@ -636,8 +665,8 @@ class PlanMaisonCard extends HTMLElement {
       if (r) {
         const a = Math.round(G.area(this._P[f]) * 2) / 2;
         head = `<div class="eyebrow">${G.KIND_LABEL[r.kind]} · ${r.area != null ? "" : "≈ "}${fr(a)} m²</div><h2>${esc(this._rname(r))}</h2>`;
-        const rd = devs.filter((d) => { const st = this._hass.states[d.entity]; const dc = st && st.attributes.device_class; return dc === "temperature" || dc === "humidity" || d.wg === "temp"; }).slice(0, 4);
-        if (rd.length) extra = `<div class="readings">${rd.map((d) => { const st = this._hass.states[d.entity]; return `<div class="rd"><div class="k">${st && st.attributes.device_class === "humidity" ? "Humidité" : "Température"}</div><div class="v">${esc(this._fmt(st))}</div></div>`; }).join("")}</div>`;
+        const rd = devs.filter((d) => { const st = this._hass.states[d.entity]; const dc = st && st.attributes.device_class; return dc === "temperature" || dc === "humidity" || d.wg === "temp" || d.wg === "hum"; }).slice(0, 4);
+        if (rd.length) extra = `<div class="readings">${rd.map((d) => { const st = this._hass.states[d.entity]; return `<div class="rd"><div class="k">${(st && st.attributes.device_class === "humidity") || d.wg === "hum" ? "Humidité" : "Température"}</div><div class="v">${esc(this._fmt(st))}</div></div>`; }).join("")}</div>`;
         if (r.kind === "todo") extra += '<p class="muted">Espace dont l\'usage reste à préciser.</p>';
       } else head = `<div class="eyebrow">Extérieur</div><h2>${esc(spots[f] || f)}</h2>`;
       p.innerHTML = `<button class="btn" id="back" style="align-self:flex-start">← Vue d'ensemble</button><div>${head}</div>${extra}<h3>Équipements</h3>${this._devList(devs)}`;
@@ -650,6 +679,7 @@ class PlanMaisonCard extends HTMLElement {
         ${Object.keys(spots).map((k) => `<button class="rl" data-go="${esc(k)}"><span>${esc(spots[k])}</span><span class="c">${cnt(k) || "–"}</span></button>`).join("")}</div>`;
     }
     this._wire(p);
+    if (!this._inSheet) { this._inSheet = true; try { this._sheet(null); } finally { this._inSheet = false; } }
   }
 
   /* ---------- fenêtres contextuelles ---------- */

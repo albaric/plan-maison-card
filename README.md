@@ -13,7 +13,7 @@ Tout se règle en YAML, puis s'ajuste à la souris directement sur le plan : clo
 - **Plan vectoriel** : les pièces sont des polygones en mètres. Les murs sont déduits des pièces : un bord partagé devient une cloison, un bord seul devient la façade (trait épais). Portes, passages et fenêtres découpent ou habillent les murs.
 - **Mode Murs** : chaque cloison a une poignée. Les pièces, portes et fenêtres qui en dépendent suivent, et les cloisons voisines sont poussées si besoin. Un tableau compare les surfaces calculées à celles que tu as indiquées.
 - **Équipements animés** : 46 icônes animées en couleur, rangées par familles (lumière, ouvrants, sécurité, chauffage, eau, cuisine, multimédia, réseau…) : l'ampoule rayonne, la porte s'ouvre, l'aspirateur roule, le robinet coule, la caméra balaie ; un halo de la couleur de la famille signale les appareils actifs. L'icône est devinée d'après l'entité, et tu peux en changer en touchant la pastille en mode Équipements.
-- **Widgets météo** sur le plan : thermomètre, anémomètre (vitesse de rotation liée au vent), pluviomètre (le bocal se remplit), baromètre (aiguille). Ils sont choisis automatiquement selon la classe du capteur.
+- **Widgets météo** sur le plan : thermomètre, anémomètre (vitesse de rotation liée au vent), pluviomètre (le bocal se remplit), baromètre (aiguille), hygromètre (goutte qui se remplit selon l'humidité, couleur de sec à humide, bulles au-delà de 65 %). Ils sont choisis automatiquement selon la classe du capteur.
 - **Mobilier** illustré (bois veiné, tissus, oreillers et couette, céramique, eau, plaques, feuillages qui ondulent, braises du barbecue) avec une bibliothèque de 36 meubles (lits, canapés, cuisine, salle de bain, jardin…).
 - **Guirlandes lumineuses** dessinées sur le plan, qui s'allument avec leur entité.
 - **Bandeau** de tuiles (météo ou autres capteurs) et panneau **« À regarder »** : équipements indisponibles, portes ouvertes, piles faibles, mises à jour, plus tes propres règles.
@@ -189,7 +189,7 @@ Un clic sur la guirlande allume ou éteint l'entité.
 | `gust` | Anémomètre : capteur de rafales (traînées de vent au-delà de 15 km/h). |
 | `intensity` | Pluviomètre : capteur d'intensité (gouttes animées quand il pleut). |
 
-Les capteurs de température, vent, précipitations et pression deviennent automatiquement des widgets animés. Un thermomètre placé hors des pièces affiche un soleil au-delà de 22 °C.
+Les capteurs de température, humidité, vent, précipitations et pression deviennent automatiquement des widgets animés. Un thermomètre placé hors des pièces affiche un soleil au-delà de 22 °C.
 
 Appui long (ou clic droit) sur une pastille : fiche Home Assistant de l'entité.
 
