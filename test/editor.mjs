@@ -112,8 +112,15 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   c = await cfg(p); check("meuble pivoté (R)", c.furniture[0].rot === 90, c.furniture[0]);
   // bandeau
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=ban]').click());
-  await p.evaluate(() => ed.shadowRoot.querySelector("#p-ban .add .epk input").focus());
-  await p.keyboard.type("exterieur temp"); await p.waitForTimeout(150); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  for (const q of ["exterieur temp", "exterieur hum"]) {
+    await p.evaluate(() => ed.shadowRoot.querySelector("#p-ban #addb").click()); await p.waitForTimeout(80);
+    await p.keyboard.type(q); await p.waitForTimeout(150); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  }
+  await p.evaluate(() => ed.shadowRoot.querySelectorAll("#p-ban .tile .addv")[0].click()); await p.waitForTimeout(80);
+  await p.keyboard.type("telecommande"); await p.waitForTimeout(150); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  const tiles = await p.evaluate(() => card.shadowRoot.querySelectorAll("#meteo .m").length);
+  const bc = await cfg(p);
+  check("deux tuiles ajoutées, valeur insérée dans la bonne tuile", tiles === 2 && bc.banner.length === 2 && bc.banner[1].entity === "sensor.exterieur_humidity" && /\{sensor.telecommande_battery\}/.test(bc.banner[0].secondary || ""), { tiles, b: bc.banner });
   c = await cfg(p); check("tuile de bandeau", c.banner && c.banner[0].entity === "sensor.exterieur_temperature", c.banner);
   // réglages
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=set]').click());

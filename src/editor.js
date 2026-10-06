@@ -82,6 +82,7 @@ const CSS = `
 .add .epk{flex:1;min-width:200px}
 .add{display:flex;gap:6px;flex-wrap:wrap}.add input{flex:1;min-width:180px;font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink)}
 .muted{color:var(--ink-2);font-size:12.5px;margin:0}
+.tile .f2{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}.tile .th{display:flex;align-items:baseline;gap:10px}.tile .th b{font-size:14.5px}.tile .tv{font-family:var(--f-mono);color:var(--ink-2);font-size:13px}.tile .th .btns{margin-left:auto}.mini:disabled{opacity:.35;cursor:default}
 svg .grid{fill:url(#eg)}svg .g1{stroke:var(--line);stroke-width:.25}svg .g5{stroke:var(--ink-2);stroke-width:.3;opacity:.5}
 svg .ax{stroke:var(--ink-2);stroke-width:.35;opacity:.5}
 svg .room{cursor:pointer;stroke:none}svg .room.sel{fill:var(--sel-soft)}
@@ -823,28 +824,39 @@ class PlanMaisonCardEditor extends HTMLElement {
 
   /* ---------- onglet Bandeau ---------- */
   _banTab() {
-    const box = this.$("p-ban"), list = this._cfg.banner || [];
-    box.innerHTML = `<p class="muted">Tuiles affichées sous le titre (météo ou n'importe quel capteur). Laisse vide pour masquer le bandeau.</p>
-      <div class="add"><span id="new"></span></div>
-      <div class="list">${list.map((t, i) => `<div class="row-e row-b" data-i="${i}"><span class="en"></span><input class="nm" value="${esc(t.name || "")}" placeholder="Titre (facultatif)" title="Titre de la tuile"><input class="sc" value="${esc(t.secondary || "")}" placeholder="Ligne secondaire" title="Ligne secondaire, ex. ressenti {sensor.ressenti:1} °C"><span class="btns"><button class="mini up" title="Monter">↑</button><button class="mini danger rm" title="Supprimer">✕</button></span></div>`).join("") || '<p class="muted">Bandeau vide.</p>'}</div>
-      <p class="muted">Ligne secondaire : texte libre affiché sous la valeur. Pour y insérer la valeur d'un autre capteur, choisis-le ici :</p><div class="add"><span id="ins"></span></div>`;
+    const box = this.$("p-ban"), list = this._cfg.banner || [], H = this._hass;
+    const val = (e, d) => { const st = H && H.states[e]; if (!st) return "–"; const n = parseFloat(st.state); const u = st.attributes.unit_of_measurement || ""; return (isNaN(n) || !/^-?[\d.]+$/.test(st.state) ? st.state : (d != null ? n.toFixed(+d) : String(Math.round(n * 10) / 10)).replace(".", ",")) + (u && !isNaN(n) ? " " + u : ""); };
+    const prev = (t) => String(t || "").replace(/\{([a-z_]+\.[\w]+)(?::(\d))?\}/gi, (m, e, d) => { const st = H && H.states[e]; return st && !isNaN(parseFloat(st.state)) ? (d != null ? parseFloat(st.state).toFixed(+d) : String(Math.round(parseFloat(st.state) * 10) / 10)).replace(".", ",") : st ? st.state : "?"; });
+    box.innerHTML = `<p class="muted">Les tuiles s'affichent sous le titre de la carte (météo ou n'importe quel capteur), dans cet ordre. Sans tuile, le bandeau est masqué.</p>
+      <div class="list">${list.map((t, i) => `<div class="props tile" data-i="${i}">
+        <div class="th"><b>${esc(t.name || friendly(H, t.entity))}</b><span class="tv">${esc(val(t.entity, t.decimals))}</span><span class="btns"><button class="mini up" title="Monter" ${i ? "" : "disabled"}>↑</button><button class="mini dn" title="Descendre" ${i < list.length - 1 ? "" : "disabled"}>↓</button><button class="mini danger rm" title="Supprimer la tuile">✕</button></span></div>
+        <div class="f2"><div class="fld">Capteur affiché<span class="en"></span></div><label class="fld">Titre (facultatif)<input class="nm" value="${esc(t.name || "")}" placeholder="${esc(friendly(H, t.entity))}"></label></div>
+        <label class="fld">Ligne secondaire (facultatif)<input class="sc" value="${esc(t.secondary || "")}" placeholder="ex. station météo"></label>
+        <div class="btns"><button class="mini addv">+ Ajouter la valeur d'un autre capteur dans cette ligne</button><span class="vslot" style="flex:1;min-width:200px"></span></div>
+        ${t.secondary ? `<div class="s">Aperçu : ${esc(prev(t.secondary))}</div>` : ""}
+      </div>`).join("") || '<p class="muted">Aucune tuile pour l\'instant.</p>'}</div>
+      <div class="add" id="addz"><button class="btn solid" id="addb">+ Ajouter une tuile</button></div>`;
     const upd = (fn) => this._change(() => { const b = clone(this._cfg.banner || []); fn(b); if (b.length) this._cfg.banner = b; else delete this._cfg.banner; });
-    this._picker(box.querySelector("#new"), "", (v) => upd((b) => b.push({ entity: v })), { keepText: false, placeholder: "Ajouter une tuile : tape le nom d'un capteur…" });
-    const lastSc = { el: null }; box.querySelectorAll(".sc").forEach((x) => x.addEventListener("focus", () => (lastSc.el = x)));
-    if (list.length) this._picker(box.querySelector("#ins"), "", (v) => {
-      const el = lastSc.el || box.querySelectorAll(".sc")[list.length - 1], i = +el.closest(".row-e").dataset.i;
-      upd((b) => { b[i].secondary = ((b[i].secondary || "") + " {" + v + "}").trim(); });
-    }, { keepText: false, placeholder: "Insérer la valeur d'un capteur dans la ligne secondaire…" });
-    else box.querySelector("#ins").parentElement.remove();
-    box.querySelectorAll(".row-e").forEach((row) => {
+    box.querySelector("#addb").onclick = (e) => {
+      const pk = this._picker(e.currentTarget, "", (v) => upd((b) => b.push({ entity: v })), { keepText: false, placeholder: "Tape le nom du capteur à afficher (température, humidité…)" });
+      setTimeout(() => pk.querySelector("input").focus(), 20);
+    };
+    box.querySelectorAll(".tile").forEach((row) => {
       const i = +row.dataset.i;
       this._picker(row.querySelector(".en"), list[i].entity, (v) => upd((b) => (b[i].entity = v)));
       row.querySelector(".nm").onchange = (e) => upd((b) => { b[i].name = e.target.value.trim(); clean(b[i]); });
       row.querySelector(".sc").onchange = (e) => upd((b) => { b[i].secondary = e.target.value.trim(); clean(b[i]); });
       row.querySelector(".up").onclick = () => i && upd((b) => b.splice(i - 1, 0, b.splice(i, 1)[0]));
+      row.querySelector(".dn").onclick = () => i < list.length - 1 && upd((b) => b.splice(i + 1, 0, b.splice(i, 1)[0]));
       row.querySelector(".rm").onclick = () => upd((b) => b.splice(i, 1));
+      row.querySelector(".addv").onclick = (e) => {
+        e.currentTarget.hidden = true;
+        const pk = this._picker(row.querySelector(".vslot"), "", (v) => upd((b) => { b[i].secondary = ((b[i].secondary || "") + " {" + v + "}").trim(); }), { keepText: false, placeholder: "Tape le nom du capteur…" });
+        setTimeout(() => pk.querySelector("input").focus(), 20);
+      };
     });
   }
+
 
   /* ---------- onglet Réglages ---------- */
   _setTab() {

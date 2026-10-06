@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.4.1
+
+- Bandeau de l'éditeur revu : un bouton « + Ajouter une tuile » ouvre la recherche du capteur ; chaque tuile est une fiche avec sa valeur actuelle, son titre, sa ligne secondaire (avec aperçu) et ses boutons monter / descendre / supprimer.
+- La valeur d'un autre capteur s'insère dans la ligne secondaire de la tuile choisie (bouton propre à chaque tuile), au lieu d'un champ commun qui prêtait à confusion avec l'ajout de tuile.
+
 ## 1.4.0
 
 - Éditeur : outil « Guirlande » pour tracer une guirlande lumineuse point par point (zigzag, ligne…) et la relier à l'interrupteur ou à la lumière qui la commande, choisi par son nom.
