@@ -56,6 +56,20 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   check("étroit : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // guirlandes listées dans la terrasse ou la pergola où elles sont accrochées
+  const { p, errs, c } = await open("complete");
+  const r = await c.evaluate((el) => {
+    const names = (id) => { el._focus = id; el._build(); el._panel(); return [...el.shadowRoot.querySelectorAll("#panel .dev .n")].map((n) => n.textContent); };
+    const t = names("terrasse"), pg = names("pergola");
+    const tg = el.shadowRoot.querySelector('#panel .tgl[data-t^="_g"]');
+    if (tg) tg.click();
+    return { t, pg, toggled: (window.calls || []).slice(-1)[0] };
+  });
+  check("guirlandes de la terrasse listées", r.t.includes("Guinguette") && r.t.includes("Guirlande terrasse"), r.t);
+  check("guirlande de la pergola listée et commandable", r.pg.includes("Guirlande pergola") && JSON.stringify(r.toggled || "").includes("guirlande_pergola"), r);
+  check("guirlandes : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

@@ -9,13 +9,13 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.7.0";
+export const VERSION = "1.7.1";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
 const NA = ["unavailable", "unknown"];
 const KIND = { toggle: "t", info: "i", value: "l", widget: "w", t: "t", i: "i", l: "l", w: "w" };
-const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.zart{pointer-events:none}.zone:hover .zart{opacity:.85}.zone.sel .zart{opacity:.6}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
+const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.lights.hl .cable{stroke:var(--sel);stroke-width:.5}.zart{pointer-events:none}.zone:hover .zart{opacity:.85}.zone.sel .zart{opacity:.6}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
 .err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.flwrap{max-height:min(60vh,520px);overflow:auto;display:flex;flex-direction:column;gap:6px}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
 
 const slug = (s) => String(s || "plan").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -255,7 +255,16 @@ class PlanMaisonCard extends HTMLElement {
     const z = this._model.zones.find((z) => { const q = z.rect; return z.type === "shed" ? this._inRect(p, [q[0] - 3, q[1] - 3, q[2] + 13, q[3] + 3]) : this._inRect(p, q); });
     return z ? { k: "spot", id: z.id } : { k: "spot", id: "jardin" };
   }
-  _devsAt(id) { return this._devs().filter((d) => this._where(d).id === id); }
+  _devsAt(id) { return this._devs().concat(this._garDevs()).filter((d) => this._where(d).id === id); }
+  /** Guirlandes reliées à un appareil, vues comme des équipements : rangées dans la pièce ou la terrasse où se trouvent la plupart de leurs points. */
+  _garDevs() {
+    return this._model.garlands.filter((l) => l.entity && l.pts.length).map((l, i) => {
+      const pts = l.pts.concat(l.pts.slice(1).map((q, k) => [(q[0] + l.pts[k][0]) / 2, (q[1] + l.pts[k][1]) / 2])), votes = {};
+      let best = null; pts.forEach((q) => { const w = this._where({ pos: q }), k = w.id; votes[k] = (votes[k] || 0) + 1; if (!best || votes[k] > votes[best]) best = k; });
+      const pos = pts.find((q) => this._where({ pos: q }).id === best);
+      return { id: "_g" + i, entity: l.entity, name: l.name || null, kind: "t", pos, garland: true };
+    });
+  }
   _furn() {
     const L = this._L;
     const base = this._model.furniture.filter((f) => !(L.furn[f.id] && L.furn[f.id].del) && (f.parts || CAT[f.type])).map((f) => {
@@ -635,17 +644,18 @@ class PlanMaisonCard extends HTMLElement {
     if (!list.length) return '<p class="muted">Aucun équipement placé ici.</p>';
     return '<ul class="devs">' + list.map((d) => {
       const s = this._stateOf(d), dom = d.entity.split(".")[0], tg = d.kind === "t" && TOGGLE.includes(dom) && s.c !== "na";
-      return `<li class="dev" data-id="${esc(d.id)}"><span class="n">${esc(this._nm(d))}</span><span class="ctl"><span class="chip ${s.c}">${esc(s.t)}</span>${tg ? `<button class="tgl ${s.c === "on" ? "on" : ""}" data-t="${esc(d.id)}" aria-label="Basculer"></button>` : ""}</span><span class="d" title="${esc(d.entity)}">${esc(describe(this._hass, d.entity))}</span></li>`;
+      return `<li class="dev" data-id="${esc(d.id)}"><span class="n">${esc(this._nm(d))}</span><span class="ctl"><span class="chip ${s.c}">${esc(s.t)}</span>${tg ? `<button class="tgl ${s.c === "on" ? "on" : ""}" data-t="${esc(d.id)}" aria-label="Basculer"></button>` : ""}</span><span class="d" title="${esc(d.entity)}">${esc(d.garland ? "Guirlande lumineuse · " + describe(this._hass, d.entity) : describe(this._hass, d.entity))}</span></li>`;
     }).join("") + "</ul>";
   }
   _wire(p) {
+    const all = this._devs().concat(this._garDevs()), hl = (d, on) => { if (this._mk[d.id]) this._mk[d.id].el.classList.toggle("hl", on); if (d.garland && this._lg) (this._lg[d.entity] || []).forEach((g) => g.classList.toggle("hl", on)); };
     p.querySelectorAll(".dev").forEach((li) => {
-      const d = this._devs().find((x) => x.id === li.dataset.id); if (!d) return;
-      li.onmouseenter = () => this._mk[d.id] && this._mk[d.id].el.classList.add("hl");
-      li.onmouseleave = () => this._mk[d.id] && this._mk[d.id].el.classList.remove("hl");
+      const d = all.find((x) => x.id === li.dataset.id); if (!d) return;
+      li.onmouseenter = () => hl(d, true);
+      li.onmouseleave = () => hl(d, false);
       li.onclick = (e) => { if (!e.target.closest(".tgl")) this._more(d.entity); };
     });
-    p.querySelectorAll(".tgl").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const d = this._devs().find((x) => x.id === b.dataset.t); if (d) this._tap(d); }));
+    p.querySelectorAll(".tgl").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const d = all.find((x) => x.id === b.dataset.t); if (d) this._tap(d); }));
     p.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => { this._focus = b.dataset.go; this._build(); this._panel(); }));
     const back = p.querySelector("#back"); if (back) back.onclick = () => { this._focus = null; this._build(); this._panel(); };
   }

@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 1.7.1
+
+- Toucher une terrasse, la pergola ou une pièce liste aussi les guirlandes qui y sont accrochées, avec leur interrupteur ; survoler la ligne surligne la guirlande sur le plan. Elles comptent dans le nombre d'équipements de chaque pièce ou espace.
+
 ## 1.7.0
 
 - Mobilier entièrement redessiné : un dessin propre à chaque meuble, avec ses détails et des couleurs vives (vaisselle sur la table, livres sur l'étagère, ordinateur sur le bureau, couette et plaid sur le lit, serviettes et canard dans le bain…).
