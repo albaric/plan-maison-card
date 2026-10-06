@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 1.5.2
+
+- Un capteur avec unité (onduleur, puissance, mémoire…) dont on a choisi l'icône affiche désormais cette icône animée sur le plan, avec la valeur dans une pastille dessous. Avant, l'icône choisie dans l'éditeur était ignorée et seule la valeur s'affichait.
+- Sur la carte, la fiche d'un équipement affiché en valeur propose aussi la bibliothèque d'icônes ; « Revenir à la valeur » annule ce choix.
+- `kind: value` reste respecté si on veut la valeur seule.
+
 ## 1.5.1
 
 - Correction : dans Home Assistant, après une première modification, l'onglet Bandeau ne réagissait plus (ajout d'une deuxième tuile, titre, ordre, suppression) et l'onglet Réglages non plus. Home Assistant verrouille la configuration que l'éditeur lui transmet ; l'éditeur lui envoie désormais une copie.

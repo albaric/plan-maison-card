@@ -15,6 +15,24 @@ async function open(cfg, hash = "") {
 }
 const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name, info]); };
 
+{ // capteur avec unité : icône choisie → icône + pastille de valeur ; sans icône → valeur seule
+  const { p, errs, c } = await open("complete");
+  const r = await p.evaluate(async () => {
+    const cfg = { title: "T", rooms: [{ name: "A", rect: [0, 0, 4, 4] }], devices: [
+      { id: "a", entity: "sensor.serveur_memoire", icon: "solar", x: 1, y: 1 },
+      { id: "b", entity: "sensor.serveur_memoire", x: 3, y: 1 },
+      { id: "c", entity: "sensor.serveur_memoire", icon: "server", kind: "value", x: 2, y: 3 }] };
+    card.setConfig(cfg); await new Promise((r) => setTimeout(r, 400));
+    const m = (id) => { const e = card._mk[id].el; return { ico: !!e.querySelector("svg.ico"), lab: e.classList.contains("lab"), vb: (e.querySelector(".vb") || {}).textContent || "", txt: e.textContent }; };
+    return { a: m("a"), b: m("b"), c: m("c") };
+  });
+  check("icône choisie sur un capteur : icône + valeur", r.a.ico && !r.a.lab && /93/.test(r.a.vb), r.a);
+  check("capteur sans icône choisie : valeur seule", !r.b.ico && r.b.lab && /93/.test(r.b.txt), r.b);
+  check("kind: value explicite respecté", r.c.lab && !r.c.ico, r.c);
+  await p.screenshot({ path: `${OUT}/valeur_icone.png` });
+  check("valeur/icône : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

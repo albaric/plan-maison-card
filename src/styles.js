@@ -14,6 +14,7 @@ export const ICON_CSS = `:host{--fw:#e6c79a;--fws:#a8834f;--fab:#8fb3d9;--fab2:#
 .piece{filter:url(#pmfs)}.rg1{fill:var(--rug1)}.rg2{fill:var(--rug2)}
 ${FURN_CSS}
 .mk{width:clamp(28px,3.2cqi,38px);height:clamp(28px,3.2cqi,38px)}
+.mk .vb{position:absolute;top:100%;left:50%;transform:translate(-50%,1px);font-family:var(--f-mono);font-size:clamp(9px,1.05cqi,11px);font-weight:600;font-variant-numeric:tabular-nums;line-height:1.45;white-space:nowrap;padding:0 5px;border-radius:8px;background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:0 1px 2px rgba(0,0,0,.15);pointer-events:none}.mk.act .vb{border-color:var(--ac,var(--line))}.mk.na .vb{color:var(--na)}
 .mk .ico{width:clamp(19px,2.2cqi,26px);height:clamp(19px,2.2cqi,26px);overflow:visible;pointer-events:none}
 .mk.on{background:color-mix(in srgb,var(--on-fill) 22%,var(--surface));border-color:var(--on);color:var(--ink);box-shadow:0 0 0 3px color-mix(in srgb,var(--on-fill) 30%,transparent)}
 ${ICONS_CSS}

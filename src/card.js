@@ -9,7 +9,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.5.1";
+export const VERSION = "1.5.2";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -229,13 +229,15 @@ class PlanMaisonCard extends HTMLElement {
     const st = this._hass && this._hass.states[d.entity], dom = d.entity.split(".")[0];
     let kind = KIND[d.kind] || null;
     const wg = d.widget === false ? null : widgetType(st, d.entity);
-    if (!kind) kind = TOGGLE.includes(dom) ? "t" : dom === "sensor" && st && st.attributes.unit_of_measurement ? "l" : "i";
+    const ov = this._L.icons[d.id], chosen = !!ov || (!!d.icon && (!!ICONS[d.icon] || /^mdi:/.test(d.icon)));
+    const unit = dom === "sensor" && !!st && !!st.attributes.unit_of_measurement;
+    // une icône choisie (éditeur ou carte) l'emporte sur l'affichage automatique en valeur ; la valeur reste en pastille
+    if (!kind) kind = TOGGLE.includes(dom) ? "t" : unit && !chosen ? "l" : "i";
     if (kind === "l" && wg) kind = "w";
-    const ov = this._L.icons[d.id];
     let ik = ov || (d.icon && ICONS[d.icon] ? d.icon : null), mdi = null;
     if (!ik && d.icon && /^mdi:/.test(d.icon)) mdi = d.icon;
     if (!ik) ik = guess(st, d.entity);
-    return { ...d, kind, wg: kind === "w" ? wg || "temp" : null, ik, mdi: ov ? null : mdi };
+    return { ...d, kind, wg: kind === "w" ? wg || "temp" : null, ik, mdi: ov ? null : mdi, val: kind === "i" && unit };
   }
   _devs() {
     const L = this._L;
@@ -269,7 +271,7 @@ class PlanMaisonCard extends HTMLElement {
       const e = w.entity || d.entity, v = this._num(e);
       if (v != null && ((w.above != null && v > w.above) || (w.below != null && v < w.below))) return { c: "warn", t: (w.prefix || "") + this._fmt(this._hass.states[e]) };
     }
-    if (d.kind === "l" || d.kind === "w") return { c: "ok", t: this._fmt(st) };
+    if (d.kind === "l" || d.kind === "w" || d.val) return { c: "ok", t: this._fmt(st) };
     if (d.entity.split(".")[0] === "binary_sensor") {
       const dc = st.attributes.device_class, on = s === "on", door = ["door", "window", "opening", "garage_door"].includes(dc), occ = ["occupancy", "motion", "presence"].includes(dc);
       return { c: on ? "on" : "off", t: on ? (door ? "Ouverte" : occ ? "Présence" : "Actif") : door ? "Fermée" : "Calme" };
@@ -487,7 +489,7 @@ class PlanMaisonCard extends HTMLElement {
       m.className = "mk" + (d.kind === "l" ? " lab" : d.kind === "w" ? " wg wg-" + d.wg : "") + (this._sel && this._sel.k === "d" && this._sel.id === d.id ? " sel" : "");
       m.style.left = l + "%"; m.style.top = t + "%";
       if (d.kind === "w") m.innerHTML = WSVG[d.wg] + '<span class="v"></span>';
-      else if (d.kind !== "l") { if (d.mdi) { const i = document.createElement("ha-icon"); i.setAttribute("icon", d.mdi); m.appendChild(i); } else { m.innerHTML = (ICONS[d.ik] || ICONS.generic)[1]; if (ACCENT[d.ik]) m.style.setProperty("--ac", ACCENT[d.ik]); } }
+      else if (d.kind !== "l") { if (d.mdi) { const i = document.createElement("ha-icon"); i.setAttribute("icon", d.mdi); m.appendChild(i); } else { m.innerHTML = (ICONS[d.ik] || ICONS.generic)[1]; if (ACCENT[d.ik]) m.style.setProperty("--ac", ACCENT[d.ik]); } if (d.val) { m.classList.add("hasv"); m.insertAdjacentHTML("beforeend", '<span class="vb"></span>'); } }
       o.appendChild(m); this._mk[d.id] = { el: m, d }; this._devEvents(m, d, p);
     });
   }
@@ -542,7 +544,7 @@ class PlanMaisonCard extends HTMLElement {
   }
   _act(m, d, s) {
     const st = this._hass.states[d.entity];
-    let on = s.c === "on" || (!!ALWAYS[d.ik] && s.c !== "na");
+    let on = s.c === "on" || (!!ALWAYS[d.ik] && s.c !== "na") || (!!d.val && parseFloat(st && st.state) > 0);
     if (d.ik === "solar") on = parseFloat(st && st.state) > 0;
     if (d.ik === "printer") on = !!st && ["home", "printing", "on"].includes(st.state);
     if (d.ik === "tablet") on = on || (!!st && st.state === "on");
@@ -561,7 +563,7 @@ class PlanMaisonCard extends HTMLElement {
     Object.values(this._mk).forEach(({ el, d }) => {
       const s = this._stateOf(d);
       el.classList.toggle("na", s.c === "na"); el.classList.toggle("on", s.c === "on"); el.classList.toggle("warn", s.c === "warn");
-      if (d.kind === "w") this._wgUpd(el, d); else if (d.kind === "l") el.textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); else this._act(el, d, s);
+      if (d.kind === "w") this._wgUpd(el, d); else if (d.kind === "l") el.textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); else { this._act(el, d, s); if (d.val) el.querySelector(".vb").textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); }
       el.title = `${this._nm(d)} : ${s.t}`;
     });
     if (this._lg) Object.entries(this._lg).forEach(([e, gs]) => gs.forEach((g) => g.classList.toggle("lit", (this._hass.states[e] || {}).state === "on")));
@@ -658,11 +660,11 @@ class PlanMaisonCard extends HTMLElement {
     pop.style.left = l + "px"; pop.style.top = t + "px";
   }
   _devPop(d) {
-    const pop = this._pop, pick = d.kind !== "w" && d.kind !== "l", ov = !!this._L.icons[d.id];
+    const pop = this._pop, pick = true, asVal = d.kind === "w" || d.kind === "l", ov = !!this._L.icons[d.id];
     pop.classList.remove("xl"); pop.classList.toggle("wide", pick);
     pop.innerHTML = `<div><div class="t">${esc(this._nm(d))}</div><div class="s" title="${esc(d.entity)}">${esc(describe(this._hass, d.entity))}</div></div>` +
-      (pick ? `<div class="s">Icône animée${ov ? "" : " (choisie automatiquement)"} : touche pour changer</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${d.ik === k && !d.mdi ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>` : "") +
-      `<div class="row"><button class="btn" id="pm-more">Fiche</button>${ov ? '<button class="btn" id="pm-auto">Icône auto</button>' : ""}<button class="btn danger" id="pm-del">Retirer du plan</button><button class="btn" id="pm-x">Fermer</button></div>`;
+      (pick ? `<div class="s">${asVal ? "Affiché en valeur. Touche une icône pour afficher l'icône animée (la valeur reste en pastille)" : `Icône animée${ov ? "" : " (choisie automatiquement)"} : touche pour changer`}</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${d.ik === k && !d.mdi ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>` : "") +
+      `<div class="row"><button class="btn" id="pm-more">Fiche</button>${ov ? `<button class="btn" id="pm-auto">${d.val && !d.icon ? "Revenir à la valeur" : "Icône auto"}</button>` : ""}<button class="btn danger" id="pm-del">Retirer du plan</button><button class="btn" id="pm-x">Fermer</button></div>`;
     const reopen = () => { this._save(); this._sel = { k: "d", id: d.id }; this._build(); const nd = this._devs().find((x) => x.id === d.id); if (nd && this._mk[d.id]) this._devPop(nd); };
     pop.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => { this._L.icons[d.id] = b.dataset.k; reopen(); }));
     const au = pop.querySelector("#pm-auto"); if (au) au.onclick = () => { delete this._L.icons[d.id]; reopen(); };
