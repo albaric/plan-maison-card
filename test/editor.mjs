@@ -50,7 +50,7 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   // déplacer le mur commun : les deux pièces suivent
   await tool(p, "select"); await click(p, [25, 20]);
   const before = await cfg(p);
-  await drag(p, [50, 20], [56, 20]);
+  await drag(p, [50, 30], [56, 30]);
   c = await cfg(p);
   check("mur commun déplacé, pièces collées", c.rooms[0].rect[2] === 5.6 && c.rooms[1].rect[0] === 5.6 && c.openings[0].from[0] === 5.6, { r: c.rooms.map((r) => r.rect), o: c.openings[0] });
   // annuler
@@ -59,9 +59,24 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   // cotes saisies
   await click(p, [25, 20]); await setInput(p, "#props #rw", "4.5");
   c = await cfg(p); check("largeur saisie", c.rooms[0].rect[2] === 4.5, c.rooms[0].rect);
-  // forme en L : double-clic sur un mur ajoute un coin
-  const E = await scr(p, 22.5, 0); await p.mouse.dblclick(...E); await p.waitForTimeout(150);
-  c = await cfg(p); check("coin ajouté (forme libre)", c.rooms[0].points && c.rooms[0].points.length === 5, c.rooms[0]);
+  // « + » au milieu du mur du haut : ajoute un coin et le tire vers le haut
+  await drag(p, [22.5, 0], [22.5, -15]);
+  c = await cfg(p); check("coin ajouté avec « + » et tiré", c.rooms[0].points && c.rooms[0].points.length === 5 && c.rooms[0].points.some((q) => Math.abs(q[0] - 2.25) < 0.06 && q[1] === -1.5), c.rooms[0].points);
+  // touche un coin : réglage au centimètre puis suppression
+  await click(p, [22.5, -15]);
+  await setInput(p, "#props #vy", "-1");
+  c = await cfg(p); check("coin réglé au centimètre", c.rooms[0].points.some((q) => Math.abs(q[0] - 2.25) < 0.06 && q[1] === -1), c.rooms[0].points);
+  await click(p, [22.5, -10]);
+  await p.evaluate(() => ed.shadowRoot.querySelector("#props #vdel").click()); await p.waitForTimeout(100);
+  c = await cfg(p); check("coin supprimé", JSON.stringify(c.rooms[0].rect) === "[0,0,4.5,4]", c.rooms[0]);
+  // outil Forme libre : une pièce en L posée coin par coin
+  await tool(p, "poly");
+  for (const q of [[90, 0], [130, 0], [130.8, 30], [110, 30.5], [110, 50], [90, 50]]) await click(p, q);
+  await click(p, [90.5, 0.5]);
+  c = await cfg(p); const L = c.rooms[c.rooms.length - 1];
+  check("pièce en L dessinée coin par coin", L.points && L.points.length === 6 && JSON.stringify(L.points) === "[[9,0],[13,0],[13,3],[11,3],[11,5],[9,5]]", L);
+  // garder la suite du test sur la première pièce
+  await tool(p, "select");
   // équipements
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=dev]').click());
   await p.evaluate(() => { const i = ed.shadowRoot.querySelector("#p-dev #new"); i.value = "light.salon"; ed.shadowRoot.querySelector("#addd").click(); });

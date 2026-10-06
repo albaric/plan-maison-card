@@ -7,7 +7,7 @@ import { toYaml } from "./yaml.js";
 import { STUB } from "./stub.js";
 import "./editor.js";
 
-export const VERSION = "1.1.0";
+export const VERSION = "1.2.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];

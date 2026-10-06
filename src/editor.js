@@ -23,14 +23,16 @@ const DKIND = [["", "Automatique"], ["toggle", "Bascule au clic"], ["info", "Ouv
 const TOOLS = [
   ["select", "Sélection", "M5 3l13 8-6 1.5L9 19z"],
   ["room", "Pièce", "M4 4h16v16H4z"],
+  ["poly", "Forme libre", "M4 4h9v6h7v10H4z"],
   ["door", "Porte", "M5 20V4h10v16M5 20h14M13 12h.01"],
   ["window", "Fenêtre", "M4 6h16v12H4zM12 6v12M4 12h16"],
   ["open", "Ouverture", "M3 12h5M16 12h5M8 9v6M16 9v6"],
   ["zone", "Extérieur", "M3 17l5-9 4 6 3-4 6 7z"],
 ];
 const HINT = {
-  select: "Touche un élément pour le modifier ; glisse une pièce, un coin (rond) ou un mur (carré) pour le déplacer. Double-clic sur un mur : ajoute un coin. Molette : zoom ; glisser le fond : déplacer la vue.",
+  select: "Touche une pièce pour la modifier : glisse-la, glisse ses coins (ronds) ou ses murs. Le « + » au milieu d'un mur ajoute un coin : tire-le pour changer la forme. Molette : zoom ; glisser le fond : déplacer la vue.",
   room: "Fais glisser sur le plan pour dessiner une pièce rectangulaire. Les bords s'aimantent aux murs existants.",
+  poly: "Clique pour poser chaque coin de la pièce, puis clique sur le premier coin (ou double-clic) pour la fermer. Les traits s'alignent à l'horizontale et à la verticale. Échap pour annuler.",
   door: "Touche un mur pour y poser une porte.",
   window: "Touche un mur pour y poser une fenêtre.",
   open: "Touche un mur pour l'ouvrir (pièces communicantes sans cloison).",
@@ -54,7 +56,7 @@ const CSS = `
 .hint{font-size:12.5px;color:var(--ink-2);min-height:2.4em;padding:0 2px}
 .cv{border:1px solid var(--line);background:var(--paper);position:relative;border-radius:6px;overflow:hidden}
 .cv svg{display:block;width:100%;height:auto;max-height:68vh;touch-action:none;user-select:none;-webkit-user-select:none}
-.cv.t-room svg,.cv.t-zone svg{cursor:crosshair}.cv.t-door svg,.cv.t-window svg,.cv.t-open svg{cursor:copy}
+.cv.t-room svg,.cv.t-zone svg,.cv.t-poly svg{cursor:crosshair}.cv.t-door svg,.cv.t-window svg,.cv.t-open svg{cursor:copy}
 .layers{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px}
 .layers label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .props{border:1px solid var(--line);background:var(--surface);padding:11px 12px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
@@ -88,6 +90,9 @@ svg .zlab{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text
 svg .ophit{fill:transparent;stroke:transparent;cursor:pointer}svg .op-sel{stroke:var(--sel);stroke-width:1.2;fill:none;pointer-events:none}
 svg .vtx{fill:var(--surface);stroke:var(--sel);stroke-width:.6;cursor:move}
 svg .edg{fill:var(--sel);stroke:var(--surface);stroke-width:.4;cursor:move}
+svg .edghit{stroke:transparent;stroke-width:3;cursor:move}svg .edghit:hover{stroke:var(--sel);stroke-opacity:.35}
+svg .addpt circle{fill:var(--surface);stroke:var(--sel);stroke-width:.5}svg .addpt path{stroke:var(--sel);stroke-width:.55;stroke-linecap:round}svg .addpt{cursor:copy}svg .addpt:hover circle{fill:var(--sel-soft)}
+svg .vtx.on{fill:var(--sel)}svg .pline{fill:var(--sel-soft);fill-opacity:.5;stroke:var(--sel);stroke-width:.7;pointer-events:none}svg .pdot{fill:var(--sel);pointer-events:none}svg .pfirst{fill:var(--surface);stroke:var(--sel);stroke-width:.6;pointer-events:none}
 svg .zc{fill:var(--sel);stroke:var(--surface);stroke-width:.4;cursor:nwse-resize}
 svg .ghost{fill:var(--sel-soft);stroke:var(--sel);stroke-width:.6;stroke-dasharray:1.5 1;pointer-events:none}
 svg .dim{font-family:var(--f-mono);fill:var(--sel);pointer-events:none}
@@ -178,6 +183,9 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (opts.geo) this._geoDirty = true;
     if (opts.zone) this._zonesDirty = true;
     this._emit(); this._render(opts.keepProps);
+    // garde le clavier sur l'éditeur (R, Suppr, Ctrl+Z) sauf si un champ vient de prendre la main
+    const a = this.shadowRoot && this.shadowRoot.activeElement;
+    if (this._tab === "plan" && (!a || !["INPUT", "SELECT", "TEXTAREA"].includes(a.tagName))) this.focus({ preventScroll: true });
   }
 
   /* ---------- squelette ---------- */
@@ -201,7 +209,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     </div>`;
     const $ = (id) => r.getElementById(id); this.$ = $; this._svg = $("svg");
     $("tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) { this._tab = b.dataset.t; this._render(); } };
-    $("tools").onclick = (e) => { const b = e.target.closest("[data-tool]"); if (b) { this._tool = b.dataset.tool; if (this._tool !== "select") this._sel = null; this._render(); } };
+    $("tools").onclick = (e) => { const b = e.target.closest("[data-tool]"); if (b) { this._tool = b.dataset.tool; this._poly = null; this._polyHover = null; if (this._tool !== "select") this._sel = null; this._render(); } };
     $("undo").onclick = () => this._back();
     $("fit").onclick = () => { this._fit(); this._drawPlan(); };
     $("l-dev").onchange = (e) => { this._showDev = e.target.checked; this._drawPlan(); };
@@ -273,7 +281,7 @@ class PlanMaisonCardEditor extends HTMLElement {
   _fit() {
     const b = this._bounds();
     if (!b) { this._vb = [-20, -20, 160, 110]; return; }
-    const pad = 20; let x = b.x - pad, y = b.y - pad, w = b.X - b.x + 2 * pad, h = b.Y - b.y + 2 * pad;
+    const pad = 32; let x = b.x - pad, y = b.y - pad, w = b.X - b.x + 2 * pad, h = b.Y - b.y + 2 * pad;
     if (w < 120) { x -= (120 - w) / 2; w = 120; } if (h < 80) { y -= (80 - h) / 2; h = 80; }
     if (h > w * 1.1) { x -= (h / 1.1 - w) / 2; w = h / 1.1; }
     this._vb = [x, y, w, h].map((v) => Math.round(v));
@@ -373,15 +381,25 @@ class PlanMaisonCardEditor extends HTMLElement {
       const p = S.rooms[sel.i].pts;
       p.forEach((a, k) => {
         const b = p[(k + 1) % p.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: "edghit", "data-k": "edge", "data-i": sel.i, "data-v": k }, s);
         if (L > 6) {
-          const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-          el("rect", { x: mx - 1.3, y: my - 1.3, width: 2.6, height: 2.6, class: "edg", "data-k": "edge", "data-i": sel.i, "data-v": k }, s);
-          this._dim(s, mx, my, fr(L / M) + " m", Math.abs(a[1] - b[1]) < 0.01 ? [0, -3.2] : [3.2, 0]);
+          const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, h = Math.abs(a[1] - b[1]) < 0.01, v = Math.abs(a[0] - b[0]) < 0.01;
+          this._dim(s, mx, my, fr(L / M) + " m", h ? [0, -3.4] : v ? [4.6, 0] : [0, -3.4]);
+          const ad = el("g", { class: "addpt", "data-k": "addpt", "data-i": sel.i, "data-v": k, transform: `translate(${mx},${my})` }, s);
+          el("title", {}, ad).textContent = "Ajouter un coin ici (tire-le pour changer la forme)";
+          el("circle", { r: 1.6 }, ad); el("path", { d: "M-.9 0H.9M0 -.9V.9" }, ad);
         }
       });
-      p.forEach((a, k) => el("circle", { cx: a[0], cy: a[1], r: 1.5, class: "vtx", "data-k": "vtx", "data-i": sel.i, "data-v": k }, s));
+      p.forEach((a, k) => el("circle", { cx: a[0], cy: a[1], r: 1.5, class: "vtx" + (sel.v === k ? " on" : ""), "data-k": "vtx", "data-i": sel.i, "data-v": k }, s));
     }
     if (sel.k === "zone" && S.zones[sel.i]) { const z = S.zones[sel.i].rect; el("rect", { x: z[2] - 1.4, y: z[3] - 1.4, width: 2.8, height: 2.8, class: "zc", "data-k": "zc", "data-i": sel.i }, s); this._dim(s, (z[0] + z[2]) / 2, z[3] + 3.5, `${fr((z[2] - z[0]) / M)} × ${fr((z[3] - z[1]) / M)} m`); }
+    // forme libre en cours
+    if (this._tool === "poly" && this._poly && this._poly.length) {
+      const P = this._poly, H = this._polyHover, all = H ? P.concat([H]) : P;
+      el(all.length > 2 ? "polygon" : "polyline", { points: all.map((q) => q.join(",")).join(" "), class: "pline" }, s);
+      P.forEach((q, k) => el("circle", { cx: q[0], cy: q[1], r: k ? 0.9 : 1.6, class: k ? "pdot" : "pfirst" }, s));
+      if (H) { const a = P[P.length - 1]; this._dim(s, (a[0] + H[0]) / 2, (a[1] + H[1]) / 2, fr(Math.hypot(H[0] - a[0], H[1] - a[1]) / M) + " m", [0, -3.2]); }
+    }
     // tracé en cours
     const d = this._drag;
     if (d && d.type === "new") {
@@ -407,8 +425,17 @@ class PlanMaisonCardEditor extends HTMLElement {
     e.preventDefault();
     if (tool === "room" || tool === "zone") { const [xs, ys] = this._magnets(); this._drag = { type: "new", kind: tool, a: [this._snap(p[0], xs), this._snap(p[1], ys)] }; return; }
     if (tool === "door" || tool === "window" || tool === "open") { this._placeOpening(tool, p); return; }
+    if (tool === "poly") { this._polyClick(p); return; }
     // sélection
     if (t.k === "bg") { this._drag = { type: "pan", sx: e.clientX, sy: e.clientY, vb: this._vb.slice(), moved: false }; return; }
+    if (t.k === "addpt") { // ajoute un coin au milieu du mur et le prend aussitôt en main
+      this._push();
+      const P = S.rooms[t.i].pts, a = P[t.v], b = P[(t.v + 1) % P.length];
+      P.splice(t.v + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]);
+      this._geoDirty = true; this._sel = { k: "room", i: t.i, v: t.v + 1 };
+      this._drag = { type: "vtx", ri: t.i, vi: t.v + 1, start: p, snap: JSON.stringify(S), moved: false, inserted: true, noUndo: true };
+      this._drawPlan(); return;
+    }
     if (t.k === "vtx" || t.k === "edge") { this._drag = { type: t.k, ri: t.i, vi: t.v, start: p, snap: JSON.stringify(S), moved: false }; return; }
     if (t.k === "zc") { this._drag = { type: "zc", zi: t.i, start: p, snap: JSON.stringify(S), moved: false }; return; }
     this._sel = { k: t.k, i: t.i };
@@ -416,6 +443,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     this._drawPlan(); this._props();
   }
   _move(e) {
+    if (this._tool === "poly" && this._poly && this._poly.length) { this._polyHover = this._polySnap(this._pt(e)); this._drawPlan(); return; }
     const d = this._drag; if (!d) return;
     if (d.type === "pan") {
       const k = this._vb[2] / this._svg.clientWidth, dx = e.clientX - d.sx, dy = e.clientY - d.sy;
@@ -426,6 +454,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (d.type === "new") { const [xs, ys] = this._magnets(); d.b = [this._snap(p[0], xs), this._snap(p[1], ys)]; this._drawPlan(); return; }
     const dx = p[0] - d.start[0], dy = p[1] - d.start[1];
     if (!d.moved && Math.hypot(dx, dy) < 0.8) return;
+    if (!d.moved && d.noUndo) d.moved = true;
     if (!d.moved) { d.moved = true; this._undo.push(JSON.stringify({ cfg: this._cfg, S: JSON.parse(d.snap), g: this._geoDirty, z: this._zonesDirty })); }
     const O = JSON.parse(d.snap), S = this._S;
     if (d.type === "vtx") {
@@ -494,13 +523,43 @@ class PlanMaisonCardEditor extends HTMLElement {
       }, { zone: true });
       return;
     }
-    if (d.moved) { this._emit(); this._render(); }
+    if (d.moved || d.inserted) { this._emit(); this._render(); return; }
+    if (d.type === "vtx") { this._sel = { k: "room", i: d.ri, v: d.vi }; this._drawPlan(); this._props(); }
   }
   _dbl(e) {
+    if (this._tool === "poly") { this._polyClose(); return; }
     if (this._tool !== "select") return;
     const hit = this.shadowRoot.elementFromPoint(e.clientX, e.clientY), t = this._target({ target: hit || e.target }), S = this._S;
     if (t.k === "vtx" && S.rooms[t.i].pts.length > 3) this._change(() => S.rooms[t.i].pts.splice(t.v, 1), { geo: true });
     else if (t.k === "edge") { const p = S.rooms[t.i].pts, a = p[t.v], b = p[(t.v + 1) % p.length]; this._change(() => p.splice(t.v + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]), { geo: true }); }
+  }
+  _polySnap(p) {
+    const [xs, ys] = this._magnets(), P = this._poly || [], last = P[P.length - 1];
+    let x = this._snap(p[0], xs), y = this._snap(p[1], ys);
+    if (last) { // alignement horizontal ou vertical avec le coin précédent ou le premier
+      if (Math.abs(x - last[0]) < 2.5) x = last[0];
+      if (Math.abs(y - last[1]) < 2.5) y = last[1];
+      const f = P[0]; if (P.length > 1) { if (Math.abs(x - f[0]) < 2.5) x = f[0]; if (Math.abs(y - f[1]) < 2.5) y = f[1]; }
+    }
+    return [x, y];
+  }
+  _polyClick(p) {
+    const P = this._poly || (this._poly = []), q = this._polySnap(p);
+    if (P.length >= 3 && Math.hypot(q[0] - P[0][0], q[1] - P[0][1]) < 2.5) { this._polyClose(); return; }
+    const last = P[P.length - 1]; if (last && last[0] === q[0] && last[1] === q[1]) return;
+    P.push(q); this._polyHover = null; this._drawPlan();
+    this.$("hint").textContent = P.length < 3 ? HINT.poly : `${P.length} coins posés. Clique sur le premier coin, double-clique ou appuie sur Entrée pour fermer la pièce.`;
+  }
+  _polyClose() {
+    const P = (this._poly || []).filter((q, i, a) => !i || q[0] !== a[i - 1][0] || q[1] !== a[i - 1][1]);
+    if (P.length > 1 && P[0][0] === P[P.length - 1][0] && P[0][1] === P[P.length - 1][1]) P.pop();
+    this._poly = null; this._polyHover = null;
+    if (P.length < 3 || G.area(P) < 0.2) { this._drawPlan(); return; }
+    this._change(() => {
+      const n = this._S.rooms.length + 1; let id = "piece" + n; while (this._S.rooms.some((r) => r.id === id)) id += "b";
+      this._S.rooms.push({ id, name: "Pièce " + n, kind: "jour", area: null, pts: P, raw: {} });
+      this._sel = { k: "room", i: this._S.rooms.length - 1, fresh: true }; this._tool = "select";
+    }, { geo: true });
   }
   _placeOpening(type, p) {
     let best = null, bd = 4.5;
@@ -518,7 +577,8 @@ class PlanMaisonCardEditor extends HTMLElement {
   _key(e) {
     if ((e.composedPath ? e.composedPath() : []).some((n) => ["INPUT", "SELECT", "TEXTAREA"].includes(n.tagName))) return;
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this._back(); return; }
-    if (e.key === "Escape") { this._sel = null; this._tool = "select"; this._render(); return; }
+    if (e.key === "Escape") { this._poly = null; this._polyHover = null; this._sel = null; this._tool = "select"; this._render(); return; }
+    if (e.key === "Enter" && this._tool === "poly") { this._polyClose(); return; }
     if ((e.key === "Delete" || e.key === "Backspace") && this._sel && this._tab === "plan") { e.preventDefault(); this._delete(); }
     if ((e.key === "r" || e.key === "R") && this._sel && this._sel.k === "furn") { e.preventDefault(); this._change(() => { const f = this._S.furniture[this._sel.i]; f.rot = ((f.rot || 0) + 90) % 360; }, { keepProps: true }); }
   }
@@ -550,7 +610,9 @@ class PlanMaisonCardEditor extends HTMLElement {
       const r = S.rooms[s.i]; if (!r) return;
       const rc = rectOf(r.pts);
       box.innerHTML = `<h4>Pièce</h4><div class="f2">${field("Nom", `<input id="nm" value="${esc(r.name)}">`)}${field("Type", `<select id="kd">${KINDS.map(([k, l]) => `<option value="${k}" ${r.kind === k ? "selected" : ""}>${l}</option>`).join("")}</select>`)}${field("Surface réelle (m², facultatif)", num("ar", r.area ?? "", 0.5))}</div>
-        ${rc ? `<div class="f2">${field("Gauche (m)", num("rx", m2(rc[0])))}${field("Haut (m)", num("ry", m2(rc[1])))}${field("Largeur (m)", num("rw", m2(rc[2] - rc[0])))}${field("Profondeur (m)", num("rh", m2(rc[3] - rc[1])))}</div>` : `<p class="s">Forme libre de ${r.pts.length} coins : glisse les coins (ronds) ou les murs (carrés). Double-clic sur un mur pour ajouter un coin.</p>`}
+        ${rc ? `<div class="f2">${field("Gauche (m)", num("rx", m2(rc[0])))}${field("Haut (m)", num("ry", m2(rc[1])))}${field("Largeur (m)", num("rw", m2(rc[2] - rc[0])))}${field("Profondeur (m)", num("rh", m2(rc[3] - rc[1])))}</div>` : ""}
+        <p class="s">${rc ? "Pièce rectangulaire." : `Forme libre de ${r.pts.length} coins.`} Pour changer la forme, touche un « + » au milieu d'un mur et tire le nouveau coin ; touche un coin pour le régler au centimètre ou le supprimer.</p>
+        ${s.v != null && r.pts[s.v] ? `<div class="f2">${field(`Coin ${s.v + 1} : X (m)`, num("vx", m2(r.pts[s.v][0])))}${field(`Coin ${s.v + 1} : Y (m)`, num("vy", m2(r.pts[s.v][1])))}</div><div class="btns">${r.pts.length > 3 ? '<button class="btn" id="vdel">Supprimer ce coin</button>' : ""}</div>` : ""}
         <p class="s">Surface dessinée : ${fr(G.area(r.pts), 1)} m²</p>
         <div class="btns"><button class="btn" id="dup">Dupliquer</button><button class="btn danger" id="del">Supprimer la pièce</button></div>`;
       const set = (fn, geo) => this._change(fn, { geo: !!geo });
@@ -563,6 +625,13 @@ class PlanMaisonCardEditor extends HTMLElement {
         if ([x, y, w, h].some(isNaN)) return;
         set(() => (r.pts = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].map((p) => p.map((v) => Math.round(v * 10) / 10))), true);
       }));
+      const vx = box.querySelector("#vx");
+      if (vx) [vx, box.querySelector("#vy")].forEach((inp) => (inp.onchange = () => {
+        const x = parseFloat(box.querySelector("#vx").value) * M, y = parseFloat(box.querySelector("#vy").value) * M; if (isNaN(x) || isNaN(y)) return;
+        const o = r.pts[s.v].slice(), same = (q) => Math.abs(q[0] - o[0]) < 0.01 && Math.abs(q[1] - o[1]) < 0.01;
+        set(() => S.rooms.forEach((rr) => rr.pts.forEach((q) => { if (same(q)) { q[0] = Math.round(x * 10) / 10; q[1] = Math.round(y * 10) / 10; } })), true);
+      }));
+      const vd = box.querySelector("#vdel"); if (vd) vd.onclick = () => set(() => { r.pts.splice(s.v, 1); this._sel = { k: "room", i: s.i }; }, true);
       box.querySelector("#dup").onclick = () => this._change(() => { const n = clone(r); n.id = r.id + "_2"; while (S.rooms.some((x) => x.id === n.id)) n.id += "b"; n.name = r.name + " (copie)"; const b = G.bboxPts(r.pts); n.pts = r.pts.map((p) => [p[0] + (b.X - b.x), p[1]]); S.rooms.push(n); this._sel = { k: "room", i: S.rooms.length - 1 }; }, { geo: true });
       box.querySelector("#del").onclick = (e) => this._confirm(e.currentTarget, () => this._delete());
       if (s.fresh) { s.fresh = false; const i = box.querySelector("#nm"); i.focus(); i.select(); }

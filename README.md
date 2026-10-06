@@ -45,9 +45,10 @@ HACS déclare la ressource `/hacsfiles/plan-maison-card/plan-maison-card.js` tou
 2. L'**éditeur visuel** s'ouvre à gauche, l'aperçu à droite. Il part d'un petit plan d'exemple : garde-le, modifie-le ou clique sur **Tout effacer**.
 3. Onglet **Plan** :
    - outil **Pièce** : fais glisser pour dessiner une pièce rectangulaire. Les bords s'aimantent aux murs existants, les dimensions s'affichent en mètres. Donne-lui un nom et un type dans le panneau du dessous (ou tape ses cotes exactes) ;
+   - outil **Forme libre** : clique pour poser chaque coin d'une pièce qui n'est pas rectangulaire (L, pan coupé, bow-window…), puis clique sur le premier coin, double-clique ou appuie sur Entrée pour la fermer. Les traits s'alignent d'eux-mêmes à l'horizontale et à la verticale ;
    - outils **Porte**, **Fenêtre**, **Ouverture** : touche un mur pour l'y poser, puis règle largeur, arc d'ouverture et libellé ;
    - outil **Extérieur** : terrasse, pergola, abri, piscine, potager, allée ;
-   - outil **Sélection** : glisse une pièce, un coin (rond) ou un mur (carré). Déplacer un mur commun déplace les deux pièces et ses portes. Double-clic sur un mur pour ajouter un coin (forme en L). Molette pour zoomer, glisser le fond pour déplacer la vue, Ctrl+Z pour annuler ;
+   - outil **Sélection** : glisse une pièce, un coin (rond) ou un mur. Déplacer un mur commun déplace les deux pièces et ses portes. Pour changer la forme d'une pièce, touche le **« + »** au milieu d'un de ses murs et tire le nouveau coin ; touche un coin pour saisir sa position au centimètre ou le supprimer. Molette pour zoomer, glisser le fond pour déplacer la vue, Ctrl+Z pour annuler ;
    - **Ajouter un meuble…** ouvre la bibliothèque ; un meuble se glisse, R le pivote, Suppr l'enlève.
 4. Onglet **Équipements** : ajoute tes entités, puis **Placer** et glisse la pastille sur le plan. Touche-la pour choisir son icône animée.
 5. Onglets **Bandeau** (tuiles météo ou capteurs) et **Réglages** (titre, thème, jardin, alertes).

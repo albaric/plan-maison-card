@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.2.0
+
+- Pièces de forme libre : outil « Forme libre » pour dessiner une pièce coin par coin, avec alignement automatique à l'horizontale et à la verticale.
+- Bouton « + » au milieu de chaque mur de la pièce sélectionnée : ajoute un coin et le tire aussitôt.
+- Un coin touché se règle au centimètre ou se supprime depuis le panneau.
+- Le clavier (R, Suppr, Ctrl+Z) reste actif après un ajout depuis le panneau.
+
 ## 1.1.0
 
 - **Éditeur visuel** dans la fenêtre « Modifier la carte » : dessin des pièces à la souris avec aimantation et cotes, portes, fenêtres et ouvertures posées sur les murs, espaces extérieurs, coins et murs déplaçables (les pièces voisines suivent), formes en L, zoom, annulation.
