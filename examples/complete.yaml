@@ -1,0 +1,273 @@
+# Exemple complet : maison de plain-pied de 11 pièces, cloisons nommées, 38 équipements.
+# Les cotes sont en mètres, origine au coin nord-ouest de la maison.
+type: custom:plan-maison-card
+title: Maison de démonstration
+view: [-5, -6, 24, 21]
+
+# Cloisons nommées : chaque nom devient une poignée en mode Murs.
+axes:
+  xS: {value: 4.1, label: "Séjour | chambre 1"}
+  xM: {value: 4.1, label: "Séjour, repas | WC, cuisine"}
+  xC1: {value: 7.3, label: "Chambre 1 | bureau"}
+  xB: {value: 10.5, label: "Bureau | chambre 2"}
+  xWC: {value: 6.8, label: "WC | douche"}
+  xK: {value: 8, label: "Cuisine | salle de bain"}
+  xE: {value: 10, label: "Salle de bain | couloir, chambre 3"}
+  xCor: {value: 10.8, label: "Couloir | petite pièce"}
+  xD: {value: 11.3, label: "Fin du dégagement"}
+  yN1: {value: 3.12, label: "Chambre 1 | dégagement"}
+  yNb: {value: 3.12, label: "Bureau | dégagement"}
+  yN2: {value: 3.12, label: "Chambre 2 | dégagement"}
+  yD: {value: 4, label: "Dégagement | WC, salle de bain"}
+  yK: {value: 5.6, label: "WC | cuisine"}
+  yKo: {value: 6.4, label: "Fin du muret cuisine"}
+  yC3: {value: 5.6, label: "Couloir | chambre 3"}
+  yR: {value: 6.1, label: "Séjour | coin repas"}
+  xW: {value: 11.5, label: "Façade ouest du bas de la chambre 3"}
+
+rooms:
+  - id: sejour
+    name: "Séjour"
+    kind: jour
+    area: 25
+    label_size: 0.44
+    points: [[0, 0], [xS, 0], [xS, yD], [xM, yD], [xM, yR], [0, yR]]
+  - id: repas
+    name: "Coin repas"
+    kind: jour
+    label_size: 0.28
+    points: [[0, yR], [xM, yR], [xM, 10], [0, 10]]
+  - id: ch1
+    name: "Chambre 1"
+    kind: nuit
+    area: 10
+    label_size: 0.32
+    points: [[xS, 0], [xC1, 0], [xC1, yN1], [xS, yN1]]
+  - id: bureau
+    name: "Bureau"
+    kind: service
+    area: 10
+    label_size: 0.32
+    points: [[xC1, 0], [xB, 0], [xB, yNb], [xC1, yNb]]
+  - id: ch2
+    name: "Chambre 2"
+    kind: nuit
+    area: 14
+    label_size: 0.32
+    points: [[xB, 0], [15, 0], [15, yN2], [xB, yN2]]
+  - id: degag
+    name: "Dégagement"
+    kind: circ
+    label_size: 0.24
+    points: [[xS, yN1], [xC1, yN1], [xC1, yNb], [xB, yNb], [xB, yN2], [xD, yN2], [xD, yD], [xCor, yD], [xCor, yC3], [xE, yC3], [xE, yD], [xS, yD]]
+  - id: wc
+    name: "WC"
+    kind: eau
+    label_size: 0.28
+    points: [[xM, yD], [xWC, yD], [xWC, yK], [xM, yK]]
+  - id: sdb
+    name: "Salle de bain"
+    kind: eau
+    label_size: 0.23
+    points: [[xWC, yD], [xE, yD], [xE, 10], [xK, 10], [xK, yK], [xWC, yK]]
+  - id: cuisine
+    name: "Cuisine"
+    kind: jour
+    label_size: 0.34
+    points: [[xM, yK], [xK, yK], [xK, 10], [xM, 10]]
+  - id: inconnu
+    name: "À préciser"
+    kind: todo
+    label_size: 0.28
+    points: [[xD, yN2], [15, yN2], [15, yC3], [xCor, yC3], [xCor, yD], [xD, yD]]
+  - id: ch3
+    name: "Chambre 3"
+    kind: nuit
+    label_size: 0.34
+    points: [[xE, yC3], [15, yC3], [15, 11.5], [xW, 11.5], [xW, 10], [xE, 10]]
+
+openings:
+  - {type: door, from: [xC1-1.1, yN1], to: [xC1-0.3, yN1]}   # chambre 1
+  - {type: door, from: [xB-1.1, yNb], to: [xB-0.4, yNb]}   # bureau
+  - {type: door, from: [xB+0.1, yN2], to: [xB+0.8, yN2]}   # chambre 2
+  - {type: door, from: [xM+0.3, yD], to: [xM+1, yD]}   # WC
+  - {type: door, from: [xK+0.4, yD], to: [xK+1.1, yD]}   # salle de bain
+  - {type: door, from: [xCor, yD+0.4], to: [xCor, yD+1.1]}   # petite pièce
+  - {type: door, from: [xE+0.1, yC3], to: [xE+0.7, yC3]}   # chambre 3
+  - {type: door, from: [2.4, 10], to: [3.3, 10], swing: up, label: Entrée}
+  - {type: open, from: [xS, yN1], to: [xS, yD], dashed: false}   # séjour ouvert sur le dégagement
+  - {type: open, from: [xS, yD], to: [xM, yD], dashed: false}
+  - {type: open, from: [xM, yKo], to: [xM, 10], dashed: false}   # cuisine ouverte au-delà du muret
+  - {type: open, from: [0, yR], to: [xM, yR]}   # séjour | coin repas
+  - {type: window, from: [4.8, 0], to: [6, 0]}
+  - {type: window, from: [8.3, 0], to: [9.5, 0]}
+  - {type: window, from: [11.6, 0], to: [13, 0]}
+  - {type: window, from: [0, 2.2], to: [0, 4.2]}
+  - {type: window, from: [0.6, 10], to: [1.8, 10]}
+  - {type: window, from: [5, 10], to: [6.2, 10]}
+  - {type: window, from: [xW, 10.2], to: [xW, 11.2]}
+  - {type: window, from: [15, 9.2], to: [15, 10.6]}
+
+zones:
+  - {id: pergola, name: Pergola, type: deck, rect: [-3, 1, 0, 6], pattern: slats, posts: true, show_size: true}
+  - {id: terrasse, name: Terrasse, type: deck, rect: [0, 10, 10, 12.6], pattern: tiles}
+  - {id: abri, name: Abri, type: shed, rect: [10.6, -3.4, 12.3, -2]}
+
+garden:
+  label: Jardin
+  trees:   # [x, y, rayon, teinte t1|t2|t3]
+    - [8, -3.8, 1.6, t1]
+    - [-3.2, -0.6, 1.1, t2]
+    - [8, 14, 0.9, t3]
+    - [17.6, 12.8, 1.1, t1]
+    - [5.8, -2, 0.4, t3]
+    - [-4, 9, 0.45, t2]
+    - [15, 13.8, 0.4, t1]
+    - [14, -3, 0.4, t2]
+    - [18.2, 2.2, 0.6, t3]
+    - [17.8, -4, 0.7, t2]
+  flowers:   # [x, y, couleur]
+    - [-4.4, 3.4, "#c9a3e6"]
+    - [-4.5, 4, "#c9a3e6"]
+    - [-4.3, 4.6, "#c9a3e6"]
+    - [12.8, -1.2, "#f6c84c"]
+    - [13.3, -0.9, "#f08aa0"]
+    - [12.4, -0.7, "#f6c84c"]
+    - [16.6, 5.8, "#f08aa0"]
+    - [17, 6.3, "#ffffff"]
+    - [16.3, 6.4, "#f6c84c"]
+    - [2.8, 13.7, "#f08aa0"]
+    - [3.4, 14, "#c9a3e6"]
+    - [2.2, 14.1, "#f6c84c"]
+    - [11.6, 12.7, "#ffffff"]
+    - [12.1, 13.1, "#f08aa0"]
+  paths:
+    - [[-2.4, -1], [0.8, -1.4]]
+
+garlands:
+  - {entity: switch.guirlande_pergola, name: Guirlande pergola, sag: 0.16, spacing: 0.34, size: 0.12, points: [[-2.9, 1.2], [-0.1, 2.12], [-2.9, 3.04], [-0.1, 3.96], [-2.9, 4.88], [-0.1, 5.8]]}
+  - {entity: light.guinguette, name: Guinguette, sag: 0.14, spacing: 0.32, size: 0.11, points: [[0.4, 10.3], [2, 11.7], [3.6, 10.3], [5.2, 11.7], [6.8, 10.3], [8.4, 11.7], [9.7, 10.3]]}
+  - {entity: light.guirlande_terrasse, name: Guirlande terrasse, style: warm, sag: 0.22, points: [[0.2, 12.38], [2.6, 12.38], [5, 12.38], [7.4, 12.38], [9.8, 12.38]]}
+
+devices:
+  - {id: lampe, entity: light.lampe_canape, name: "Lampe canapé", icon: lamp, x: 2.4, y: 0.55, kind: toggle}
+  - {id: multiprise, entity: switch.multiprise_sejour, name: "Multiprise séjour", icon: strip, x: 3.5, y: 3, kind: toggle}
+  - {id: moustiques, entity: switch.prise_anti_moustiques, name: "Prise moustiques", icon: mosquito, x: 2.8, y: 5.7, kind: toggle}
+  - {id: zigbee, entity: sensor.coordinateur_zigbee_temperature, name: "Coordinateur Zigbee", icon: zigbee, x: 3.5, y: 2.2, kind: info, warn: {above: 70}}
+  - {id: box, entity: sensor.box_internet_debit_descendant, name: "Box internet", icon: router, x: 3.5, y: 3.8, kind: info}
+  - {id: cam108, entity: camera.sejour, name: "Caméra séjour", icon: camera, x: 3.7, y: 0.4, kind: info}
+  - {id: th_salon, entity: sensor.sejour_temperature, name: "Capteur séjour", x: 1.6, y: 3, warn: {entity: sensor.sejour_batterie, below: 40, prefix: "Pile "}}
+  - {id: cp_salon, entity: binary_sensor.baie_sejour, name: "Baie du séjour", icon: window, x: 0.3, y: 3.4, kind: info}
+  - {id: poele, entity: climate.poele, name: "Poêle à granulés", icon: fire, x: 0.4, y: 5.2, kind: info}
+  - {id: cp_entree, entity: binary_sensor.porte_entree_contact, name: "Porte d'entrée", icon: door, x: 2.9, y: 9.3, kind: info}
+  - {id: lum_entree, entity: switch.lumiere_entree, name: "Lumière de l'entrée", icon: ceiling, x: 1.7, y: 9.3, kind: toggle}
+  - {id: kiosque, entity: binary_sensor.ecran_mural, name: "Écran mural", icon: tablet, x: 0.3, y: 8.8, kind: info}
+  - {id: mvt, entity: binary_sensor.ecran_mural_presence, name: "Présence écran mural", icon: motion, x: 0.3, y: 8, kind: info}
+  - {id: vaisselle, entity: switch.vanne_arrosage_lave_vaisselle, name: "Vanne « Vaisselle »", icon: dishwasher, x: 6, y: 8.8, kind: info}
+  - {id: serveur, entity: sensor.serveur_memoire, name: "Serveur (mémoire)", icon: server, x: 7.8, y: 2.6, kind: info, warn: {above: 90}}
+  - {id: mr1, entity: sensor.passerelle_radio_temperature, name: "Passerelle radio", icon: zigbee, x: 8.45, y: 2.6, kind: info, warn: {above: 70}}
+  - {id: imprimante, entity: device_tracker.imprimante, name: "Imprimante", icon: printer, x: 9.9, y: 1.2, kind: info}
+  - {id: th_sdb, entity: sensor.salle_de_bain_temperature, name: "Capteur salle de bain", x: 8.6, y: 8.4}
+  - {id: thermostat, entity: climate.salle_de_bain, name: "Chauffage salle de bain", icon: radiator, x: 9.5, y: 9.2, kind: info}
+  - {id: lum_pergola, entity: switch.guirlande_pergola, name: "Guirlande pergola", icon: string, x: -1.5, y: 0.4, kind: toggle}
+  - {id: lum_salon_jardin, entity: switch.eclairage_salon_jardin, name: "Salon de jardin", icon: flood, x: -1.5, y: 6.6, kind: toggle}
+  - {id: guinguette, entity: light.guinguette, name: "Guinguette", icon: string, x: 5, y: 11, kind: toggle}
+  - {id: guirlande, entity: light.guirlande_terrasse, name: "Guirlande terrasse", icon: guinguette, x: 5, y: 13.1, kind: toggle}
+  - {id: abri, entity: switch.spot_abri, name: "Spot de l'abri", icon: socket, x: 11.8, y: -2.7, kind: toggle}
+  - {id: porte_abri, entity: binary_sensor.porte_abri, name: "Porte de l'abri", icon: door, x: 11, y: -2.3, kind: info}
+  - {id: onduleur, entity: sensor.onduleur_puissance, name: "Production solaire", icon: solar, x: 13.1, y: -2.7, kind: info}
+  - {id: prise_ext, entity: switch.prise_exterieure, name: "Prise extérieure", icon: socket, x: 10.4, y: 12.1, kind: toggle}
+  - {id: cam72, entity: camera.jardin_nord, name: "Caméra jardin nord", icon: camera, x: -0.4, y: -0.4, kind: info}
+  - {id: cam66, entity: camera.jardin_est, name: "Caméra jardin est", icon: camera, x: 15.5, y: 12, kind: info}
+  - {id: arrosage1, entity: switch.arrosage_1, name: "Arrosage voie 1", icon: sprinkler, x: -4.2, y: 3.6, kind: info}
+  - {id: arrosage2, entity: switch.arrosage_2, name: "Arrosage voie 2", icon: faucet, x: -4.2, y: 4.4, kind: info}
+  - {id: vanne, entity: switch.vanne_arrosage, name: "Vanne d'arrosage", icon: valve, x: -4.2, y: 6.2, kind: info}
+  - {id: station, entity: sensor.station_meteo_temperature, name: "Station météo", x: 16.6, y: -1.6}
+  - {id: pluvio, entity: sensor.pluviometre_aujourd_hui, name: "Pluie du jour", x: 16.6, y: 0.8, intensity: sensor.pluviometre_intensite}
+  - {id: anemo, entity: sensor.anemometre_vitesse_moyenne, name: "Vent moyen", x: 16.6, y: -4.2, gust: sensor.anemometre_rafale}
+  - {id: tv, entity: media_player.tv_chambre, name: "TV chambre", icon: tv, kind: info}
+  - {id: wiz, entity: light.ampoule_couleur, name: "Ampoule couleur", icon: bulbrgb, kind: toggle}
+  - {id: baro, entity: sensor.station_meteo_pression, name: Pression, x: 16.6, y: 3.2}
+
+furniture:
+  - {id: canape, name: "Canapé", x: 0.4, y: 0.2, type: canape, style: sofa}
+  - {id: tapis, name: "Table basse", x: 0.7, y: 1.6, parts: [[e, 0.7, 0.4, 0.7, 0.4]], style: wood}
+  - {id: meubletv, name: "Meuble TV", x: 3.76, y: 1.4, parts: [[r, 0, 0, 0.3, 1.2, 0.03]], style: wood}
+  - {id: plante, name: "Plante", x: 0.1, y: 0.1, type: plante, style: plant}
+  - {id: poele, name: "Poêle à granulés", x: 0.12, y: 4.94, parts: [[c, 0.28, 0.28, 0.28], [c, 0.28, 0.28, 0.13]], style: stove}
+  - {id: table, name: "Table et 6 chaises", x: 0.99, y: 7.05, parts: [[r, 0.41, 0, 0.8, 1.8, 0.04], [c, 0.16, 0.3, 0.16], [c, 0.16, 0.9, 0.16], [c, 0.16, 1.5, 0.16], [c, 1.46, 0.3, 0.16], [c, 1.46, 0.9, 0.16], [c, 1.46, 1.5, 0.16]], style: dining}
+  - {id: lit_ch1, name: "Lit double", x: 4.4, y: 0.3, type: lit2, style: bed}
+  - {id: armoire_ch1, name: "Armoire", x: 6.4, y: 0.2, parts: [[r, 0, 0, 0.8, 1.6, 0.03]], style: wood}
+  - {id: bureau_table, name: "Bureau", x: 9, y: 0.2, type: bureau, style: wood}
+  - {id: rangement, name: "Rangement", x: 7.5, y: 2.3, parts: [[r, 0, 0, 1.2, 0.6, 0.03]], style: wood}
+  - {id: lit_ch2, name: "Lit double", x: 10.8, y: 1.2, parts: [[r, 0, 0, 1.9, 1.8, 0.06], [r, 0.1, 0.1, 0.4, 0.75, 0.06], [r, 0.1, 0.95, 0.4, 0.75, 0.06]], style: bed}
+  - {id: penderie, name: "Penderie", x: 14, y: 0.2, parts: [[r, 0, 0, 0.9, 1.2, 0.03]], style: wood}
+  - {id: wc, name: "WC", x: 4.46, y: 4.1, parts: [[e, 0.24, 0.7, 0.24, 0.32], [r, 0.04, 0, 0.4, 0.2, 0.03]], style: ceramic}
+  - {id: lavemains, name: "Lave-mains", x: 6, y: 4.1, parts: [[r, 0, 0, 0.6, 0.3, 0.05], [e, 0.3, 0.15, 0.16, 0.09]], style: ceramic}
+  - {id: douche, name: "Douche", x: 6.88, y: 4.08, parts: [[r, 0, 0, 1.04, 1.44, 0.04], [l, 0, 0, 1.04, 1.44], [l, 1.04, 0, 0, 1.44], [c, 0.52, 0.72, 0.09]], style: shower}
+  - {id: vasques, name: "Double vasque", x: 8.06, y: 6, parts: [[r, 0, 0, 0.45, 1.3, 0.03], [e, 0.22, 0.3, 0.13, 0.18], [e, 0.22, 0.95, 0.13, 0.18]], style: ceramic}
+  - {id: baignoire, name: "Baignoire", x: 9, y: 6.2, parts: [[r, 0, 0, 0.9, 1.9, 0.2], [r, 0.12, 0.12, 0.66, 1.66, 0.18]], style: bath}
+  - {id: radiateur, name: "Sèche-serviettes", x: 9.82, y: 4.3, parts: [[r, 0, 0, 0.14, 1, 0.02]], style: metal}
+  - {id: plan_est, name: "Plan de travail et plaques", x: 7.4, y: 5.7, parts: [[r, 0, 0, 0.55, 4.2, 0.02], [c, 0.27, 1.3, 0.11], [c, 0.27, 1.7, 0.11], [c, 0.27, 2.1, 0.11], [c, 0.27, 2.5, 0.11]], style: counter}
+  - {id: plan_sud, name: "Plan de travail et évier", x: 4.1, y: 9.4, parts: [[r, 0, 0, 3.3, 0.55, 0.02], [r, 1.2, 0.1, 0.6, 0.35, 0.06]], style: counter}
+  - {id: bar, name: "Bar", x: 3.5, y: 7.6, parts: [[r, 0, 0, 0.6, 2.35, 0.03]], style: wood}
+  - {id: tabourets, name: "Tabourets", x: 3.1, y: 7.9, parts: [[c, 0.14, 0.14, 0.14], [c, 0.14, 0.64, 0.14], [c, 0.14, 1.14, 0.14]], style: stool}
+  - {id: buffet_ch3, name: "Grand meuble", x: 13, y: 5.75, parts: [[r, 0, 0, 1.8, 0.6, 0.03]], style: wood}
+  - {id: lit_ch3, name: "Lit double", x: 12.8, y: 9.3, parts: [[r, 0, 0, 1.8, 2.1, 0.06], [r, 0.1, 1.55, 0.75, 0.45, 0.06], [r, 0.95, 1.55, 0.75, 0.45, 0.06]], style: bed}
+  - {id: salon_jardin, name: "Salon de jardin", x: -2.4, y: 2.6, parts: [[r, 0, 0, 1.2, 0.8, 0.06], [c, -0.2, 0.4, 0.16], [c, 1.4, 0.4, 0.16]], style: garden}
+
+banner:
+  - entity: sensor.station_meteo_temperature
+    name: Température
+    icon: mdi:thermometer
+    color: temperature
+    decimals: 1
+    secondary: "ressenti {sensor.temperature_ressentie:1} °C"
+  - entity: sensor.station_meteo_humidite
+    name: Humidité
+    icon: mdi:water-percent
+    color: "#3e7bfa"
+    decimals: 0
+    secondary: station météo
+  - entity: sensor.station_meteo_pression
+    name: Pression
+    icon: mdi:gauge
+    color: "#8e6bd8"
+    decimals: 1
+    secondary: "pile station {sensor.station_meteo_batterie:0} %"
+  - entity: sensor.pluviometre_aujourd_hui
+    name: Pluie du jour
+    icon: mdi:weather-rainy
+    color: "#2bb3a3"
+    decimals: 1
+    secondary: "hier {sensor.pluviometre_hier:1} · mois {sensor.pluviometre_mois:1} mm"
+  - entity: sensor.anemometre_vitesse_moyenne
+    name: Vent moyen
+    icon: mdi:weather-windy
+    color: "#5aa0ff"
+    decimals: 1
+    secondary: "rafale {sensor.anemometre_rafale:1} km/h"
+  - entity: sensor.vigilance_meteo
+    name: Vigilance météo
+    icon: mdi:alert-outline
+    icons: {Vert: mdi:shield-check-outline}
+    colors: {Vert: "#2f9e5a", Jaune: "#d9a400", Orange: "#f07a2c", Rouge: "#e5484d"}
+    secondary: "pluie {sensor.probabilite_pluie:0} % · UV {sensor.indice_uv:0}"
+
+alerts:
+  battery: false   # seuils propres à chaque pile ci-dessous
+  updates: false   # seule la mise à jour du serveur de fichiers est suivie
+  rules:
+    - {entity: climate.poele, state: unavailable, level: na, title: "Poêle à granulés indisponible", text: "L'intégration ne répond plus : vérifier son Wi-Fi avant les premiers froids."}
+    - {entity: media_player.tv_chambre, state: unavailable, level: na, title: "TV chambre indisponible", text: "media_player.tv_chambre ne répond pas."}
+    - {entity: binary_sensor.porte_entree_contact, state: "on", title: "Porte d'entrée ouverte", text: "Depuis {since}."}
+    - {entity: binary_sensor.baie_sejour, state: "on", title: "Baie du séjour ouverte"}
+    - {entity: binary_sensor.porte_abri, state: "on", title: "Porte de l'abri ouverte"}
+    - {entity: sensor.serveur_memoire, above: 90, title: "Serveur à {value:0} % de mémoire", text: "Machine virtuelle Home Assistant."}
+    - {entity: sensor.passerelle_radio_temperature, above: 70, title: "Passerelle radio à {state}", text: "Puce principale chaude."}
+    - {entity: sensor.coordinateur_zigbee_connexion, state: wifi, title: "Coordinateur Zigbee en Wi-Fi", text: "Ethernet débranché sur le coordinateur Zigbee."}
+    - {entity: update.serveur_fichiers, state: "on", title: "Serveur de fichiers : mise à jour disponible"}
+    - {entity: sensor.sejour_batterie, below: 40, level: info, title: "Pile du capteur séjour à {value:0} %"}
+    - {entity: sensor.vanne_arrosage_batterie, below: 30, level: info, title: "Pile de la vanne d'arrosage à {value:0} %"}
+    - {entity: sensor.salle_de_bain_humidite, above: 80, level: info, title: "Humidité salle de bain à {state}"}
+    - {entity: sensor.vigilance_meteo, not: [Vert, unavailable, unknown], title: "Vigilance météo {state}", text: "Météo-France."}

@@ -1,0 +1,55 @@
+# Exemple de départ : une maison de plain-pied de 10 × 8 m.
+# Aucun axe n'est déclaré : chaque cote utilisée par les pièces devient automatiquement
+# une cloison déplaçable en mode Murs (les fenêtres et portes posées dessus suivent).
+# Remplace les entités par les tiennes.
+type: custom:plan-maison-card
+title: Ma maison
+
+rooms:
+  - {id: sejour, name: Séjour, kind: jour, area: 27, rect: [0, 0, 6, 4.5]}
+  - {id: cuisine, name: Cuisine, kind: jour, rect: [6, 0, 10, 3]}
+  - {id: sdb, name: Salle de bain, kind: eau, rect: [6, 3, 10, 4.5]}
+  - {id: ch1, name: Chambre 1, kind: nuit, rect: [0, 4.5, 5, 8]}
+  - {id: ch2, name: Chambre 2, kind: nuit, rect: [5, 4.5, 10, 8]}
+
+openings:
+  - {type: door, from: [2, 0], to: [2.9, 0], swing: down, label: Entrée}
+  - {type: open, from: [6, 1], to: [6, 2.6]}          # passage séjour | cuisine, en pointillés
+  - {type: door, from: [7, 3], to: [7.7, 3]}
+  - {type: door, from: [3.6, 4.5], to: [4.4, 4.5]}
+  - {type: door, from: [5.6, 4.5], to: [6.4, 4.5]}
+  - {type: window, from: [0, 1], to: [0, 3]}
+  - {type: window, from: [7.5, 0], to: [9, 0]}
+  - {type: window, from: [1, 8], to: [3, 8]}
+  - {type: window, from: [7, 8], to: [9, 8]}
+
+zones:
+  - {id: terrasse, name: Terrasse, type: deck, rect: [0, 8, 6, 10.5]}
+  - {id: piscine, name: Piscine, type: pool, rect: [7, 9.5, 11, 12]}
+
+garlands:
+  - {entity: light.guirlande_terrasse, name: Guirlande, points: [[0.3, 8.4], [2, 8.4], [4, 8.4], [5.7, 8.4]], sag: 0.2}
+
+devices:
+  - {entity: light.salon, x: 3, y: 2}
+  - {entity: sensor.salon_temperature, x: 1.2, y: 3.6}
+  - {entity: binary_sensor.porte_entree, icon: door, x: 2.45, y: 0.6}
+  - {entity: switch.prise_cuisine, x: 8.8, y: 1.2}
+  - {entity: sensor.exterieur_temperature, x: 12, y: 1}
+  - {entity: media_player.tv_chambre}                  # sans position : rangé dans « À placer »
+
+furniture:
+  - {type: canape, x: 0.4, y: 0.4}
+  - {type: tableronde, x: 3.6, y: 2.2}
+  - {type: frigo, x: 9.2, y: 0.2}
+  - {type: lit2, x: 1.5, y: 5.2}
+  - {type: lit1, x: 8.5, y: 5.6}
+  - {type: plante, x: 5.4, y: 0.2}
+
+banner:
+  - {entity: sensor.exterieur_temperature, name: Dehors, color: temperature, decimals: 1}
+  - {entity: sensor.exterieur_humidity, name: Humidité, decimals: 0}
+
+alerts:
+  battery: 20        # piles sous 20 % (false pour désactiver)
+  updates: true      # mises à jour disponibles
