@@ -8,7 +8,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.3.0";
+export const VERSION = "1.4.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -429,12 +429,12 @@ class PlanMaisonCard extends HTMLElement {
       const d = path(l.pts, l.sag), gg = el("g", { class: "lights" }, g), cols = l.colors, sp = l.gap, w = l.w;
       (this._lg[l.entity] = this._lg[l.entity] || []).push(gg);
       const st = this._hass.states[l.entity];
-      el("title", {}, gg).textContent = (l.name || (st && st.attributes.friendly_name) || l.entity) + " · clic pour allumer ou éteindre";
+      el("title", {}, gg).textContent = (l.name || (st && st.attributes.friendly_name) || l.entity || "Guirlande") + (l.entity ? " · clic pour allumer ou éteindre" : " · à relier à un interrupteur dans l'éditeur");
       el("path", { d, class: "cable" }, gg);
       cols.forEach((c, i) => el("path", { d, class: "glow", stroke: c, "stroke-width": w * 2.4, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
       cols.forEach((c, i) => el("path", { d, stroke: c, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
       el("path", { d, class: "hit" }, gg);
-      gg.onclick = (e) => { e.stopPropagation(); if (this._mode === "view") this._tap({ entity: l.entity, kind: "t" }); };
+      gg.onclick = (e) => { e.stopPropagation(); if (this._mode === "view" && l.entity) this._tap({ entity: l.entity, kind: "t" }); };
     });
   }
 

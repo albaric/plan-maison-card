@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.4.0
+
+- Éditeur : outil « Guirlande » pour tracer une guirlande lumineuse point par point (zigzag, ligne…) et la relier à l'interrupteur ou à la lumière qui la commande, choisi par son nom.
+- Les guirlandes existantes s'affichent dans l'éditeur ; on les déplace, on glisse ou ajoute leurs points d'accroche, on règle les ampoules (multicolores façon guinguette ou blanc chaud) et l'affaissement.
+- Sur la carte, la guirlande s'illumine quand l'appareil est allumé et un clic l'allume ou l'éteint (une guirlande pas encore reliée n'a plus d'effet au clic).
+- Le type d'appareil s'affiche sous le nom dans le sélecteur, sans chevaucher le texte.
+
 ## 1.3.0
 
 - Les appareils se choisissent par leur nom courant : on tape « lampe salon » et on choisit dans la liste (nom, type d'appareil et pièce Home Assistant). Les identifiants techniques (`light.xxx`) n'apparaissent plus, ni dans l'éditeur (Équipements, Bandeau, panneau d'un équipement) ni dans la carte (ajout en mode Équipements, listes du panneau latéral).

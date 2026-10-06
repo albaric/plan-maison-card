@@ -38,7 +38,7 @@ export const PICKER_CSS = `
 .epk{position:relative;min-width:0}
 .epk input{font:inherit;font-size:13.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:5px 7px;border-radius:5px;width:100%;box-sizing:border-box;min-width:0}
 .epk input:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 2px var(--sel-soft)}
-.epk .cur{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink-2);pointer-events:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.epk .cur{display:block;margin-top:2px;font-size:11px;color:var(--ink-2);pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.epk .cur:empty{display:none}
 .epk ul{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 3px);margin:0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:7px;box-shadow:0 10px 28px rgba(0,0,0,.22);max-height:280px;overflow:auto;min-width:240px}
 .epk ul[hidden]{display:none}
 .epk li{display:flex;flex-direction:column;gap:1px;padding:6px 8px;border-radius:5px;cursor:pointer}

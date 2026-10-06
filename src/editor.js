@@ -4,7 +4,7 @@ import { ICONS, guess } from "./icons.js";
 import { CAT, FSTYLE } from "./furniture.js";
 import { BASE_CSS, ICON_CSS } from "./styles.js";
 import * as G from "./geometry.js";
-import { createPicker, PICKER_CSS, DEVICE_DOMAINS } from "./picker.js";
+import { createPicker, PICKER_CSS, DEVICE_DOMAINS, friendly } from "./picker.js";
 
 const M = 10;
 const NS = "http://www.w3.org/2000/svg";
@@ -29,11 +29,13 @@ const TOOLS = [
   ["window", "Fenêtre", "M4 6h16v12H4zM12 6v12M4 12h16"],
   ["open", "Ouverture", "M3 12h5M16 12h5M8 9v6M16 9v6"],
   ["zone", "Extérieur", "M3 17l5-9 4 6 3-4 6 7z"],
+  ["garland", "Guirlande", "M2 7q5 7 10 0t10 0M7 10.5v2M12 7v2M17 10.5v2"],
 ];
 const HINT = {
   select: "Touche une pièce pour la modifier : glisse-la, glisse ses coins (ronds) ou ses murs. Le « + » au milieu d'un mur ajoute un coin : tire-le pour changer la forme. Molette : zoom ; glisser le fond : déplacer la vue.",
   room: "Fais glisser sur le plan pour dessiner une pièce rectangulaire. Les bords s'aimantent aux murs existants.",
   poly: "Clique pour poser chaque coin de la pièce, puis clique sur le premier coin (ou double-clic) pour la fermer. Les traits s'alignent à l'horizontale et à la verticale. Échap pour annuler.",
+  garland: "Clique pour poser les points d'accroche de la guirlande (zigzag, ligne droite…), puis double-clique ou appuie sur Entrée pour terminer. Choisis ensuite l'interrupteur qui l'allume.",
   door: "Touche un mur pour y poser une porte.",
   window: "Touche un mur pour y poser une fenêtre.",
   open: "Touche un mur pour l'ouvrir (pièces communicantes sans cloison).",
@@ -57,7 +59,7 @@ const CSS = `
 .hint{font-size:12.5px;color:var(--ink-2);min-height:2.4em;padding:0 2px}
 .cv{border:1px solid var(--line);background:var(--paper);position:relative;border-radius:6px;overflow:hidden}
 .cv svg{display:block;width:100%;height:auto;max-height:68vh;touch-action:none;user-select:none;-webkit-user-select:none}
-.cv.t-room svg,.cv.t-zone svg,.cv.t-poly svg{cursor:crosshair}.cv.t-door svg,.cv.t-window svg,.cv.t-open svg{cursor:copy}
+.cv.t-room svg,.cv.t-zone svg,.cv.t-poly svg,.cv.t-garland svg{cursor:crosshair}.cv.t-door svg,.cv.t-window svg,.cv.t-open svg{cursor:copy}
 .layers{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px}
 .layers label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .props{border:1px solid var(--line);background:var(--surface);padding:11px 12px;display:flex;flex-direction:column;gap:9px;border-radius:6px}
@@ -94,7 +96,8 @@ svg .vtx{fill:var(--surface);stroke:var(--sel);stroke-width:.6;cursor:move}
 svg .edg{fill:var(--sel);stroke:var(--surface);stroke-width:.4;cursor:move}
 svg .edghit{stroke:transparent;stroke-width:3;cursor:move}svg .edghit:hover{stroke:var(--sel);stroke-opacity:.35}
 svg .addpt circle{fill:var(--surface);stroke:var(--sel);stroke-width:.5}svg .addpt path{stroke:var(--sel);stroke-width:.55;stroke-linecap:round}svg .addpt{cursor:copy}svg .addpt:hover circle{fill:var(--sel-soft)}
-svg .vtx.on{fill:var(--sel)}svg .pline{fill:var(--sel-soft);fill-opacity:.5;stroke:var(--sel);stroke-width:.7;pointer-events:none}svg .pdot{fill:var(--sel);pointer-events:none}svg .pfirst{fill:var(--surface);stroke:var(--sel);stroke-width:.6;pointer-events:none}
+svg .vtx.on{fill:var(--sel)}
+svg .gcab{fill:none;stroke:var(--ink-2);stroke-width:.3;pointer-events:none}svg .ghit{fill:none;stroke:transparent;stroke-width:3.2;cursor:move;pointer-events:stroke}svg .ghit.sel,svg .ghit:hover{stroke:var(--sel);stroke-opacity:.3}svg .gnew{fill:none;stroke:var(--sel);stroke-width:.6;stroke-dasharray:1.4 1;pointer-events:none}svg .pline{fill:var(--sel-soft);fill-opacity:.5;stroke:var(--sel);stroke-width:.7;pointer-events:none}svg .pdot{fill:var(--sel);pointer-events:none}svg .pfirst{fill:var(--surface);stroke:var(--sel);stroke-width:.6;pointer-events:none}
 svg .zc{fill:var(--sel);stroke:var(--surface);stroke-width:.4;cursor:nwse-resize}
 svg .ghost{fill:var(--sel-soft);stroke:var(--sel);stroke-width:.6;stroke-dasharray:1.5 1;pointer-events:none}
 svg .dim{font-family:var(--f-mono);fill:var(--sel);pointer-events:none}
@@ -129,7 +132,7 @@ class PlanMaisonCardEditor extends HTMLElement {
   /* ---------- lecture de la configuration ---------- */
   _load(AXover) {
     const c = this._cfg; this._err = null;
-    const S = { rooms: [], openings: [], zones: [], devices: [], furniture: [] };
+    const S = { rooms: [], openings: [], zones: [], devices: [], furniture: [], garlands: [] };
     let model = null;
     try { model = G.buildModel(Object.assign({}, c, { rooms: c.rooms || [] })); } catch (e) { this._err = e.message; }
     if (model) {
@@ -140,8 +143,9 @@ class PlanMaisonCardEditor extends HTMLElement {
       S.zones = model.zones.map((z, i) => ({ ...z, rect: z.rect.slice(), raw: (c.zones || [])[i] || {} }));
       S.devices = model.devices.map((d, i) => ({ id: d.id, entity: d.entity, pos: d.pos, raw: clone((c.devices || [])[i] || {}) }));
       S.furniture = model.furniture.map((f, i) => ({ ...f, raw: clone((c.furniture || [])[i] || {}) }));
+      S.garlands = model.garlands.map((g, i) => ({ entity: g.entity || "", name: g.name, pts: g.pts.map((q) => q.slice()), sag: g.sag, style: g.colors.length === 1 ? "warm" : "multi", raw: clone((c.garlands || [])[i] || {}) }));
     }
-    this._S = S; this._geoDirty = false; this._zonesDirty = false;
+    this._S = S; this._geoDirty = false; this._zonesDirty = false; this._garDirty = false;
   }
 
   /* ---------- écriture de la configuration ---------- */
@@ -160,6 +164,15 @@ class PlanMaisonCardEditor extends HTMLElement {
     } else if (c.rooms) {
       c.rooms = c.rooms.map((r, i) => { const s = S.rooms[i]; if (!s) return r; const o = { ...r, name: s.name, kind: s.kind }; if (s.area != null) o.area = s.area; else delete o.area; return o; });
     }
+    if (this._garDirty) {
+      c.garlands = S.garlands.map((g) => {
+        const o = { ...g.raw, entity: g.entity || undefined, name: g.name || undefined, points: g.pts.map(pt), sag: m2(g.sag) };
+        if (g.style === "warm") { o.style = "warm"; delete o.colors; } else { delete o.style; if (!Array.isArray(o.colors) || o.colors.length < 2) delete o.colors; }
+        if (g.restyled) { delete o.spacing; delete o.size; }
+        return clean(o);
+      });
+      if (!c.garlands.length) delete c.garlands;
+    }
     if (this._zonesDirty) {
       c.zones = S.zones.map((z) => clean({ id: z.id, name: z.name, type: z.type, rect: z.rect.map(m2), pattern: z.type === "deck" ? z.pattern : undefined, posts: z.posts || undefined, show_size: z.size || undefined }));
       if (!c.zones.length) delete c.zones;
@@ -172,10 +185,10 @@ class PlanMaisonCardEditor extends HTMLElement {
     this._cfg = c; this._emitted = JSON.stringify(c);
     this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: c }, bubbles: true, composed: true }));
   }
-  _push() { this._undo.push(JSON.stringify({ cfg: this._cfg, S: this._S, g: this._geoDirty, z: this._zonesDirty })); if (this._undo.length > 60) this._undo.shift(); }
+  _push() { this._undo.push(JSON.stringify({ cfg: this._cfg, S: this._S, g: this._geoDirty, z: this._zonesDirty, l: this._garDirty })); if (this._undo.length > 60) this._undo.shift(); }
   _back() {
     const u = this._undo.pop(); if (!u) return;
-    const o = JSON.parse(u); this._cfg = o.cfg; this._S = o.S; this._geoDirty = o.g; this._zonesDirty = o.z; this._sel = null;
+    const o = JSON.parse(u); this._cfg = o.cfg; this._S = o.S; this._geoDirty = o.g; this._zonesDirty = o.z; this._garDirty = !!o.l; this._sel = null;
     this._emit(); this._render();
   }
   /** Applique une modification : mémorise l'état précédent, émet la config et redessine. */
@@ -184,6 +197,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     fn();
     if (opts.geo) this._geoDirty = true;
     if (opts.zone) this._zonesDirty = true;
+    if (opts.gar) this._garDirty = true;
     this._emit(); this._render(opts.keepProps);
     // garde le clavier sur l'éditeur (R, Suppr, Ctrl+Z) sauf si un champ vient de prendre la main
     const a = this.shadowRoot && this.shadowRoot.activeElement;
@@ -276,6 +290,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     S.zones.forEach((z) => pts.push([z.rect[0], z.rect[1]], [z.rect[2], z.rect[3]]));
     S.devices.forEach((d) => d.pos && pts.push(d.pos));
     S.furniture.forEach((f) => pts.push([f.x, f.y]));
+    (S.garlands || []).forEach((g) => pts.push(...g.pts));
     return pts.length ? G.bboxPts(pts) : null;
   }
   _fit() {
@@ -363,6 +378,24 @@ class PlanMaisonCardEditor extends HTMLElement {
       el("text", { x: lp[0], y: lp[1], "text-anchor": "middle", class: "rlab", "font-size": Math.max(1.5, ls) }, s).textContent = r.name;
       el("text", { x: lp[0], y: lp[1] + Math.max(1.5, ls) * 1.05, "text-anchor": "middle", class: "rar", "font-size": 1.9 }, s).textContent = fr(a, 1) + " m²";
     });
+    // guirlandes
+    (S.garlands || []).forEach((g, i) => {
+      if (g.pts.length < 2) return;
+      const dd = garPath(g.pts, g.sag), on = sel.k === "gar" && sel.i === i, cols = g.style === "warm" ? ["#ffcf70"] : (Array.isArray(g.raw.colors) && g.raw.colors.length > 1 ? g.raw.colors : MULTI);
+      const gap = g.style === "warm" ? 4.6 : 3.3, w = g.style === "warm" ? 2 : 1.15;
+      el("path", { d: dd, class: "gcab" }, s);
+      cols.forEach((c, k) => el("path", { d: dd, stroke: c, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": "0 " + gap * cols.length, "stroke-dashoffset": -gap * k, fill: "none", "pointer-events": "none" }, s));
+      const hit = el("path", { d: dd, class: "ghit" + (on ? " sel" : ""), "data-k": "gar", "data-i": i }, s);
+      el("title", {}, hit).textContent = (g.name || (g.entity ? friendly(this._hass, g.entity) : "Guirlande non reliée")) + " · touche pour la régler";
+      if (on) {
+        g.pts.forEach((a, k) => {
+          const b = g.pts[k + 1]; if (!b || Math.hypot(b[0] - a[0], b[1] - a[1]) < 5) return;
+          const ad = el("g", { class: "addpt", "data-k": "gadd", "data-i": i, "data-v": k, transform: `translate(${(a[0] + b[0]) / 2},${(a[1] + b[1]) / 2 + g.sag / 2})` }, s);
+          el("title", {}, ad).textContent = "Ajouter un point d'accroche"; el("circle", { r: 1.4 }, ad); el("path", { d: "M-.8 0H.8M0 -.8V.8" }, ad);
+        });
+        g.pts.forEach((a, k) => el("circle", { cx: a[0], cy: a[1], r: 1.3, class: "vtx", "data-k": "gvtx", "data-i": i, "data-v": k }, s));
+      }
+    });
     // équipements
     if (this._showDev) S.devices.forEach((d, i) => {
       if (!d.pos) return;
@@ -393,6 +426,12 @@ class PlanMaisonCardEditor extends HTMLElement {
       p.forEach((a, k) => el("circle", { cx: a[0], cy: a[1], r: 1.5, class: "vtx" + (sel.v === k ? " on" : ""), "data-k": "vtx", "data-i": sel.i, "data-v": k }, s));
     }
     if (sel.k === "zone" && S.zones[sel.i]) { const z = S.zones[sel.i].rect; el("rect", { x: z[2] - 1.4, y: z[3] - 1.4, width: 2.8, height: 2.8, class: "zc", "data-k": "zc", "data-i": sel.i }, s); this._dim(s, (z[0] + z[2]) / 2, z[3] + 3.5, `${fr((z[2] - z[0]) / M)} × ${fr((z[3] - z[1]) / M)} m`); }
+    // guirlande en cours
+    if (this._tool === "garland" && this._poly && this._poly.length) {
+      const P = this._poly, all = this._polyHover ? P.concat([this._polyHover]) : P;
+      if (all.length > 1) el("path", { d: garPath(all, 1.6), class: "gnew" }, s);
+      P.forEach((q) => el("circle", { cx: q[0], cy: q[1], r: 1, class: "pdot" }, s));
+    }
     // forme libre en cours
     if (this._tool === "poly" && this._poly && this._poly.length) {
       const P = this._poly, H = this._polyHover, all = H ? P.concat([H]) : P;
@@ -426,6 +465,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (tool === "room" || tool === "zone") { const [xs, ys] = this._magnets(); this._drag = { type: "new", kind: tool, a: [this._snap(p[0], xs), this._snap(p[1], ys)] }; return; }
     if (tool === "door" || tool === "window" || tool === "open") { this._placeOpening(tool, p); return; }
     if (tool === "poly") { this._polyClick(p); return; }
+    if (tool === "garland") { this._garClick(p); return; }
     // sélection
     if (t.k === "bg") { this._drag = { type: "pan", sx: e.clientX, sy: e.clientY, vb: this._vb.slice(), moved: false }; return; }
     if (t.k === "addpt") { // ajoute un coin au milieu du mur et le prend aussitôt en main
@@ -436,6 +476,15 @@ class PlanMaisonCardEditor extends HTMLElement {
       this._drag = { type: "vtx", ri: t.i, vi: t.v + 1, start: p, snap: JSON.stringify(S), moved: false, inserted: true, noUndo: true };
       this._drawPlan(); return;
     }
+    if (t.k === "gadd") {
+      this._push();
+      const P = S.garlands[t.i].pts, a = P[t.v], b = P[t.v + 1];
+      P.splice(t.v + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]);
+      this._garDirty = true; this._sel = { k: "gar", i: t.i };
+      this._drag = { type: "gvtx", gi: t.i, vi: t.v + 1, start: p, snap: JSON.stringify(S), moved: false, inserted: true, noUndo: true };
+      this._drawPlan(); return;
+    }
+    if (t.k === "gvtx") { this._drag = { type: "gvtx", gi: t.i, vi: t.v, start: p, snap: JSON.stringify(S), moved: false }; return; }
     if (t.k === "vtx" || t.k === "edge") { this._drag = { type: t.k, ri: t.i, vi: t.v, start: p, snap: JSON.stringify(S), moved: false }; return; }
     if (t.k === "zc") { this._drag = { type: "zc", zi: t.i, start: p, snap: JSON.stringify(S), moved: false }; return; }
     this._sel = { k: t.k, i: t.i };
@@ -443,7 +492,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     this._drawPlan(); this._props();
   }
   _move(e) {
-    if (this._tool === "poly" && this._poly && this._poly.length) { this._polyHover = this._polySnap(this._pt(e)); this._drawPlan(); return; }
+    if ((this._tool === "poly" || this._tool === "garland") && this._poly && this._poly.length) { this._polyHover = this._polySnap(this._pt(e)); this._drawPlan(); return; }
     const d = this._drag; if (!d) return;
     if (d.type === "pan") {
       const k = this._vb[2] / this._svg.clientWidth, dx = e.clientX - d.sx, dy = e.clientY - d.sy;
@@ -455,9 +504,12 @@ class PlanMaisonCardEditor extends HTMLElement {
     const dx = p[0] - d.start[0], dy = p[1] - d.start[1];
     if (!d.moved && Math.hypot(dx, dy) < 0.8) return;
     if (!d.moved && d.noUndo) d.moved = true;
-    if (!d.moved) { d.moved = true; this._undo.push(JSON.stringify({ cfg: this._cfg, S: JSON.parse(d.snap), g: this._geoDirty, z: this._zonesDirty })); }
+    if (!d.moved) { d.moved = true; this._undo.push(JSON.stringify({ cfg: this._cfg, S: JSON.parse(d.snap), g: this._geoDirty, z: this._zonesDirty, l: this._garDirty })); }
     const O = JSON.parse(d.snap), S = this._S;
-    if (d.type === "vtx") {
+    if (d.type === "gvtx") {
+      const o = O.garlands[d.gi].pts[d.vi], [xs, ys] = this._magnets();
+      S.garlands[d.gi].pts[d.vi] = [this._snap(o[0] + dx, xs), this._snap(o[1] + dy, ys)]; this._garDirty = true;
+    } else if (d.type === "vtx") {
       const o = O.rooms[d.ri].pts[d.vi], same = (q) => Math.abs(q[0] - o[0]) < 0.01 && Math.abs(q[1] - o[1]) < 0.01;
       const [xs, ys] = this._magnets((ri, vi) => ri >= 0 && same(O.rooms[ri].pts[vi]));
       const nx = this._snap(o[0] + dx, xs), ny = this._snap(o[1] + dy, ys);
@@ -499,6 +551,9 @@ class PlanMaisonCardEditor extends HTMLElement {
         S.openings[d.i].a = h ? [o.a[0] + m, o.a[1]] : [o.a[0], o.a[1] + m]; S.openings[d.i].b = h ? [o.b[0] + m, o.b[1]] : [o.b[0], o.b[1] + m]; this._geoDirty = true;
       } else if (d.k === "dev") {
         const o = O.devices[d.i]; S.devices[d.i].pos = [Math.round((o.pos[0] + dx) * 2) / 2, Math.round((o.pos[1] + dy) * 2) / 2];
+      } else if (d.k === "gar") {
+        const mx = Math.round(dx), my = Math.round(dy);
+        S.garlands[d.i].pts = O.garlands[d.i].pts.map((q) => [q[0] + mx, q[1] + my]); this._garDirty = true;
       } else if (d.k === "furn") {
         const o = O.furniture[d.i]; S.furniture[d.i].x = Math.round((o.x + dx) * 2) / 2; S.furniture[d.i].y = Math.round((o.y + dy) * 2) / 2;
       }
@@ -528,8 +583,10 @@ class PlanMaisonCardEditor extends HTMLElement {
   }
   _dbl(e) {
     if (this._tool === "poly") { this._polyClose(); return; }
+    if (this._tool === "garland") { this._garClose(); return; }
     if (this._tool !== "select") return;
     const hit = this.shadowRoot.elementFromPoint(e.clientX, e.clientY), t = this._target({ target: hit || e.target }), S = this._S;
+    if (t.k === "gvtx" && S.garlands[t.i].pts.length > 2) { this._change(() => S.garlands[t.i].pts.splice(t.v, 1), { gar: true }); return; }
     if (t.k === "vtx" && S.rooms[t.i].pts.length > 3) this._change(() => S.rooms[t.i].pts.splice(t.v, 1), { geo: true });
     else if (t.k === "edge") { const p = S.rooms[t.i].pts, a = p[t.v], b = p[(t.v + 1) % p.length]; this._change(() => p.splice(t.v + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]), { geo: true }); }
   }
@@ -561,6 +618,21 @@ class PlanMaisonCardEditor extends HTMLElement {
       this._sel = { k: "room", i: this._S.rooms.length - 1, fresh: true }; this._tool = "select";
     }, { geo: true });
   }
+  _garClick(p) {
+    const P = this._poly || (this._poly = []), q = this._polySnap(p), last = P[P.length - 1];
+    if (last && Math.hypot(q[0] - last[0], q[1] - last[1]) < 1) { this._garClose(); return; }
+    P.push(q); this._polyHover = null; this._drawPlan();
+    this.$("hint").textContent = P.length < 2 ? HINT.garland : `${P.length} points posés. Double-clique ou appuie sur Entrée pour terminer la guirlande.`;
+  }
+  _garClose() {
+    const P = (this._poly || []).filter((q, i, a) => !i || q[0] !== a[i - 1][0] || q[1] !== a[i - 1][1]);
+    this._poly = null; this._polyHover = null;
+    if (P.length < 2) { this._drawPlan(); return; }
+    this._change(() => {
+      this._S.garlands.push({ entity: "", name: null, pts: P, sag: 1.6, style: "multi", raw: {} });
+      this._sel = { k: "gar", i: this._S.garlands.length - 1, fresh: true }; this._tool = "select";
+    }, { gar: true });
+  }
   _placeOpening(type, p) {
     let best = null, bd = 4.5;
     this._S.rooms.forEach((r) => r.pts.forEach((a, k) => {
@@ -579,13 +651,14 @@ class PlanMaisonCardEditor extends HTMLElement {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); this._back(); return; }
     if (e.key === "Escape") { this._poly = null; this._polyHover = null; this._sel = null; this._tool = "select"; this._render(); return; }
     if (e.key === "Enter" && this._tool === "poly") { this._polyClose(); return; }
+    if (e.key === "Enter" && this._tool === "garland") { this._garClose(); return; }
     if ((e.key === "Delete" || e.key === "Backspace") && this._sel && this._tab === "plan") { e.preventDefault(); this._delete(); }
     if ((e.key === "r" || e.key === "R") && this._sel && this._sel.k === "furn") { e.preventDefault(); this._change(() => { const f = this._S.furniture[this._sel.i]; f.rot = ((f.rot || 0) + 90) % 360; }, { keepProps: true }); }
   }
   _delete() {
     const s = this._sel, S = this._S; if (!s) return;
-    const list = { room: S.rooms, op: S.openings, zone: S.zones, furn: S.furniture }[s.k];
-    if (list) this._change(() => { list.splice(s.i, 1); this._sel = null; }, { geo: s.k === "room" || s.k === "op", zone: s.k === "zone" });
+    const list = { room: S.rooms, op: S.openings, zone: S.zones, furn: S.furniture, gar: S.garlands }[s.k];
+    if (list) this._change(() => { list.splice(s.i, 1); this._sel = null; }, { geo: s.k === "room" || s.k === "op", zone: s.k === "zone", gar: s.k === "gar" });
     else if (s.k === "dev") this._change(() => { S.devices[s.i].pos = null; this._sel = null; });
   }
 
@@ -669,6 +742,22 @@ class PlanMaisonCardEditor extends HTMLElement {
       return;
     }
     if (s.k === "dev") { this._devProps(box, S.devices[s.i], s.i); return; }
+    if (s.k === "gar") {
+      const g = S.garlands[s.i]; if (!g) return;
+      box.innerHTML = `<h4>Guirlande lumineuse</h4>${g.entity ? "" : '<p class="s" style="color:var(--na)">Choisis l\'interrupteur ou la lumière qui commande cette guirlande.</p>'}
+        <div class="f2"><div class="fld">Commandée par<span id="gen"></span></div>${field("Nom (facultatif)", `<input id="nm" value="${esc(g.name || "")}" placeholder="${esc(g.entity ? friendly(this._hass, g.entity) : "Guinguette")}">`)}
+        ${field("Ampoules", `<select id="st"><option value="multi" ${g.style !== "warm" ? "selected" : ""}>Multicolores (guinguette)</option><option value="warm" ${g.style === "warm" ? "selected" : ""}>Blanc chaud</option></select>`)}${field("Affaissement (m)", num("sg", m2(g.sag), 0.05))}</div>
+        <p class="s">Sur la carte, la guirlande s'illumine quand l'appareil est allumé, et un clic dessus l'allume ou l'éteint. Glisse-la pour la déplacer, glisse ses points d'accroche, ou touche un « + » pour en ajouter ; double-clic sur un point pour le retirer.</p>
+        <div class="btns"><button class="btn danger" id="del">Supprimer la guirlande</button></div>`;
+      const set = (fn) => this._change(fn, { gar: true });
+      const pk = this._picker(box.querySelector("#gen"), g.entity, (v) => set(() => (g.entity = v)), { domains: ["light", "switch", "input_boolean", "fan"], placeholder: "Tape le nom de l'interrupteur…" });
+      box.querySelector("#nm").onchange = (e) => set(() => (g.name = e.target.value.trim() || null));
+      box.querySelector("#st").onchange = (e) => set(() => { g.style = e.target.value; g.restyled = true; });
+      box.querySelector("#sg").onchange = (e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) set(() => (g.sag = Math.max(0, v * M))); };
+      box.querySelector("#del").onclick = () => this._delete();
+      if (s.fresh && !g.entity) { s.fresh = false; setTimeout(() => pk.querySelector("input").focus(), 30); }
+      return;
+    }
     if (s.k === "furn") {
       const f = S.furniture[s.i]; if (!f) return;
       const name = f.name || (CAT[f.type] && CAT[f.type][0]) || "Meuble";
@@ -819,6 +908,8 @@ class PlanMaisonCardEditor extends HTMLElement {
 }
 
 /* ---------- utilitaires ---------- */
+const MULTI = ["#e5484d", "#f5a524", "#30a46c", "#3e7bfa", "#c04bd8"];
+function garPath(pts, sag) { let d = ""; for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; d += `M${a[0]} ${a[1]}Q${(a[0] + b[0]) / 2} ${(a[1] + b[1]) / 2 + sag} ${b[0]} ${b[1]}`; } return d; }
 function rectOf(p) {
   if (p.length !== 4) return null;
   const xs = [...new Set(p.map((q) => q[0]))], ys = [...new Set(p.map((q) => q[1]))];

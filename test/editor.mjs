@@ -47,6 +47,20 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   await tool(p, "zone"); await drag(p, [0, 40], [60, 62]);
   c = await cfg(p); check("zone extérieure", c.zones && c.zones.length === 1 && c.zones[0].rect.join() === "0,4,6,6.2", c.zones);
   await setInput(p, "#props #nm", "Terrasse sud");
+  // guirlande en zigzag au-dessus de la terrasse, reliée à un interrupteur
+  await tool(p, "garland");
+  for (const q of [[2, 44], [20, 58], [38, 44]]) await click(p, q);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  c = await cfg(p);
+  check("guirlande tracée", c.garlands && c.garlands.length === 1 && c.garlands[0].points.length === 3 && !c.garlands[0].entity, c.garlands);
+  await p.evaluate(() => ed.shadowRoot.querySelector("#props .epk input").focus());
+  await p.keyboard.type("lumiere sal"); await p.waitForTimeout(150); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  await setInput(p, "#props #st", "warm");
+  c = await cfg(p);
+  check("guirlande reliée à son interrupteur, blanc chaud", c.garlands[0].entity === "light.salon" && c.garlands[0].style === "warm", c.garlands[0]);
+  const lit = await p.evaluate(() => { const g = card.shadowRoot.querySelector("g.lights"); if (!g) return null; g.dispatchEvent(new MouseEvent("click", { bubbles: true })); return { lit: g.classList.contains("lit"), calls: JSON.stringify(window.calls) }; });
+  check("aperçu : guirlande allumée et commandable au clic", lit && lit.lit && /light","toggle".*light.salon/.test(lit.calls), lit);
+  await tool(p, "select");
   // déplacer le mur commun : les deux pièces suivent
   await tool(p, "select"); await click(p, [25, 20]);
   const before = await cfg(p);
@@ -116,6 +130,8 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   const { p, errs } = await open("cfg=complete");
   const note = await p.evaluate(() => ed.shadowRoot.getElementById("note").textContent);
   check("avertissement cloisons nommées", /cloisons nommées/.test(note), note);
+  const ng = await p.evaluate(() => ed.shadowRoot.querySelectorAll("#svg .ghit").length);
+  check("guirlandes existantes visibles dans l'éditeur", ng === 3, ng);
   await click(p, [20, 20]);
   await setInput(p, "#props #nm", "Salon");
   let c = await cfg(p);
