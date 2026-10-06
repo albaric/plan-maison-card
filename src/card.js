@@ -9,14 +9,14 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.8.1";
+export const VERSION = "1.8.2";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
 const NA = ["unavailable", "unknown"];
 const KIND = { toggle: "t", info: "i", value: "l", widget: "w", t: "t", i: "i", l: "l", w: "w" };
 const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.lights.hl .cable{stroke:var(--sel);stroke-width:.5}.zart{pointer-events:none}.zone:hover .zart{opacity:.85}.zone.sel .zart{opacity:.6}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
-.err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.flwrap{max-height:min(60vh,520px);overflow:auto;display:flex;flex-direction:column;gap:6px}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
+.err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.main{grid-template-columns:minmax(0,1fr) var(--pw,clamp(240px,22%,300px));position:relative}.main.nopanel{grid-template-columns:minmax(0,1fr)}.pres{position:absolute;top:0;bottom:0;right:calc(var(--pw,clamp(240px,22%,300px)) + 2px);width:12px;cursor:col-resize;z-index:3;touch-action:none}.pres::after{content:"";position:absolute;left:5px;top:40%;height:56px;width:3px;border-radius:2px;background:var(--line);transition:background .15s}.pres:hover::after,.pres.drag::after{background:var(--sel)}.main.nopanel .pres{display:none}@container (max-width:860px){.main{grid-template-columns:minmax(0,1fr)!important}.pres{display:none}}.flwrap{max-height:min(60vh,520px);overflow:auto;display:flex;flex-direction:column;gap:6px}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
 
 const slug = (s) => String(s || "plan").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 const fr = (n, d) => (d == null ? String(Math.round(n * 100) / 100) : n.toFixed(d)).replace(".", ",");
@@ -120,10 +120,10 @@ class PlanMaisonCard extends HTMLElement {
             <span><i class="dot" style="border-color:var(--on);border-width:2.5px"></i>À surveiller</span><span><i class="dot" style="background:var(--na-soft);border-color:var(--na);border-style:dashed"></i>Indisponible</span>
             <span>Clic : allumer ou éteindre · appui long : fiche</span></div>
         </section>
-        <aside class="panel" id="panel"></aside>
+        <aside class="panel" id="panel"></aside><div class="pres" id="pres" title="Glisser pour régler la largeur de la vue d'ensemble (double-clic : largeur par défaut)"></div>
       </div></div></ha-card>`;
     const $ = (id) => r.getElementById(id);
-    this.$ = $; this._svg = $("svg"); this._ovl = $("ovl"); this._pop = $("pop"); this._stage = $("stage");
+    this.$ = $; this._svg = $("svg"); setTimeout(() => this._panelResize()); this._ovl = $("ovl"); this._pop = $("pop"); this._stage = $("stage");
     this._head();
     $("seg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) this._setMode(b.dataset.m); });
     $("showdev").addEventListener("change", () => this._build());
@@ -143,6 +143,28 @@ class PlanMaisonCard extends HTMLElement {
     this.$("title").parentElement.hidden = c.header === false;
     this._svg.setAttribute("viewBox", this._view.join(" "));
     const mt = this.$("meteo"); mt.textContent = ""; mt.hidden = !(c.banner && c.banner.length);
+    this._panelLayout();
+  }
+  /** Vue d'ensemble : masquée (panel: false) ou largeur réglée (panel_width en px, ou glissée sur la carte, mémorisée pour l'utilisateur). */
+  _panelLayout() {
+    const main = this.shadowRoot && this.shadowRoot.querySelector(".main"); if (!main) return;
+    const cw = Number(this._config.panel_width) || 0;
+    if (this._pwCfg !== undefined && this._pwCfg !== cw && this._L && this._L.pw && this._hass) { delete this._L.pw; this._save(); } // nouvelle largeur choisie dans l'éditeur : elle l'emporte
+    this._pwCfg = cw;
+    const off = this._config.panel === false, w = (this._L && this._L.pw) || cw;
+    main.classList.toggle("nopanel", off); this.$("panel").hidden = off;
+    if (w) main.style.setProperty("--pw", Math.max(200, Math.min(700, w)) + "px"); else main.style.removeProperty("--pw");
+  }
+  _panelResize() {
+    const h = this.$("pres"); if (!h || h._wired) return; h._wired = true;
+    h.addEventListener("dblclick", () => { if (this._L) { delete this._L.pw; this._save(); } this._panelLayout(); });
+    h.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); h.setPointerCapture(e.pointerId); h.classList.add("drag");
+      const main = this.shadowRoot.querySelector(".main"), right = main.getBoundingClientRect().right;
+      const mv = (ev) => { const w = Math.round(Math.max(200, Math.min(700, right - ev.clientX))); main.style.setProperty("--pw", w + "px"); this._pwNew = w; };
+      const up = () => { h.classList.remove("drag"); h.removeEventListener("pointermove", mv); h.removeEventListener("pointerup", up); if (this._pwNew && this._L) { this._L.pw = this._pwNew; this._save(); } };
+      h.addEventListener("pointermove", mv); h.addEventListener("pointerup", up);
+    });
   }
   _reconfig() {
     this._AX = Object.assign({}, this._defAX);
@@ -163,6 +185,7 @@ class PlanMaisonCard extends HTMLElement {
     try { const r = await this._hass.callWS({ type: "frontend/get_user_data", key: this._key }); if (r && r.value) this._L = Object.assign(this._L, r.value); } catch (e) { /* disposition par défaut */ }
     ["axes", "pos", "furn", "devHidden", "names", "icons"].forEach((k) => (this._L[k] = this._L[k] || {}));
     ["added", "devAdded"].forEach((k) => (this._L[k] = this._L[k] || []));
+    this._panelLayout();
     Object.keys(this._L.axes).forEach((k) => { if (k in this._AX) this._AX[k] = this._L.axes[k]; });
     this._geo(); this._build(); this._built = true; this._meteo(); this._live(); this._panel();
   }
@@ -701,11 +724,9 @@ class PlanMaisonCard extends HTMLElement {
       p.innerHTML = `<button class="btn" id="back" style="align-self:flex-start">← Vue d'ensemble</button><div>${head}</div>${extra}<h3>Équipements</h3>${this._devList(devs)}`;
     } else {
       const w = this._watch(), all = this._devs(), cnt = (id) => this._devsAt(id).length;
-      p.innerHTML = `<div><div class="eyebrow">Vue d'ensemble</div><h2>${rooms.length} pièce${rooms.length > 1 ? "s" : ""}, ${all.length} équipement${all.length > 1 ? "s" : ""}</h2></div>
-        <p class="muted">Touche une pastille pour allumer ou éteindre, appui long pour sa fiche. Touche une pièce pour voir ce qu'elle contient.</p>
-        <h3>À regarder</h3><ul class="watch">${w.length ? w.map(([c, t, d]) => `<li><span class="bar ${c}"></span><div><div class="t">${esc(t)}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div></li>`).join("") : '<li><span class="bar ok"></span><div><div class="t">Rien à signaler</div></div></li>'}</ul>
-        <h3>Pièces et extérieur</h3><div class="rooms">${rooms.map((r) => `<button class="rl" data-go="${esc(r.id)}"><span>${esc(this._rname(r))}</span><span class="c">${cnt(r.id) || "–"}</span></button>`).join("")}
-        ${Object.keys(spots).map((k) => `<button class="rl" data-go="${esc(k)}"><span>${esc(spots[k])}</span><span class="c">${cnt(k) || "–"}</span></button>`).join("")}</div>`;
+      p.innerHTML = `<h3>À regarder</h3><ul class="watch">${w.length ? w.map(([c, t, d]) => `<li><span class="bar ${c}"></span><div><div class="t">${esc(t)}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div></li>`).join("") : '<li><span class="bar ok"></span><div><div class="t">Rien à signaler</div></div></li>'}</ul>
+        ${this._config.panel_rooms ? `<h3>Pièces et extérieur</h3><div class="rooms">${rooms.map((r) => `<button class="rl" data-go="${esc(r.id)}"><span>${esc(this._rname(r))}</span><span class="c">${cnt(r.id) || "–"}</span></button>`).join("")}
+        ${Object.keys(spots).map((k) => `<button class="rl" data-go="${esc(k)}"><span>${esc(spots[k])}</span><span class="c">${cnt(k) || "–"}</span></button>`).join("")}</div>` : ""}`;
     }
     this._wire(p);
     if (!this._inSheet) { this._inSheet = true; try { this._sheet(null); } finally { this._inSheet = false; } }

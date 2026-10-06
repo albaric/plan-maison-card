@@ -70,6 +70,21 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   check("guirlandes : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // vue d'ensemble : liste des pièces facultative, largeur réglable (config et poignée), masquable
+  const { p, errs, c } = await open("complete");
+  const r0 = await c.evaluate((el) => ({ rooms: !!el.shadowRoot.querySelector("#panel .rooms"), only: !el.shadowRoot.querySelector("#panel h2") && el.shadowRoot.querySelector("#panel h3").textContent === "À regarder", w: el.shadowRoot.querySelector("#panel").getBoundingClientRect().width }));
+  const h = await c.evaluate((el) => { const r = el.shadowRoot.querySelector("#pres").getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height * 0.45]; });
+  await p.mouse.move(h[0], h[1]); await p.mouse.down(); await p.mouse.move(h[0] - 140, h[1], { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(500);
+  const r1 = await c.evaluate((el) => ({ w: el.shadowRoot.querySelector("#panel").getBoundingClientRect().width, pw: el._L.pw, saved: JSON.stringify(window.store || {}).includes('"pw"') }));
+  const r2 = await c.evaluate(async (el) => { el.setConfig(Object.assign({}, el._config, { panel_width: 420, panel_rooms: true })); await new Promise((r) => setTimeout(r, 300)); return { w: el.shadowRoot.querySelector("#panel").getBoundingClientRect().width, rooms: !!el.shadowRoot.querySelector("#panel .rooms"), pw: el._L.pw }; });
+  const r3 = await c.evaluate(async (el) => { el.setConfig(Object.assign({}, el._config, { panel: false })); await new Promise((r) => setTimeout(r, 300)); return { hidden: el.shadowRoot.querySelector("#panel").hidden }; });
+  check("vue d'ensemble : seulement « À regarder » par défaut", !r0.rooms && r0.only, r0);
+  check("largeur réglée en tirant le bord (mémorisée)", r1.w > r0.w + 100 && r1.pw === Math.round(r1.w) && r1.saved, JSON.stringify({ r0, r1, h }));
+  check("largeur et liste des pièces depuis la config", Math.abs(r2.w - 420) < 2 && r2.rooms && !r2.pw, r2);
+  check("vue d'ensemble masquable", r3.hidden, r3);
+  check("vue d'ensemble : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

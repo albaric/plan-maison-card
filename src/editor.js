@@ -894,6 +894,8 @@ class PlanMaisonCardEditor extends HTMLElement {
       <div class="props"><h4>Jardin</h4><div class="btns"><label class="chk2"><input type="checkbox" id="gd" ${gd ? "checked" : ""}> Dessiner le jardin autour de la maison</label></div>
         ${gd ? `<div class="f2">${field("Libellé", `<input id="gl" value="${esc(gd.label ?? "Jardin")}">`)}</div><div class="btns"><label class="chk2"><input type="checkbox" id="at" ${gd.trees ? "" : "checked"}> Arbres placés automatiquement</label></div>` : ""}
         ${c.view ? '<div class="btns"><button class="btn" id="vw">Cadrage automatique (supprimer « view »)</button></div>' : ""}</div>
+      <div class="props"><h4>Vue d'ensemble</h4><div class="btns"><label class="chk2"><input type="checkbox" id="pn" ${c.panel === false ? "" : "checked"}> Afficher la vue d'ensemble à droite du plan</label><label class="chk2"><input type="checkbox" id="pr" ${c.panel_rooms ? "checked" : ""}> Lister les pièces et l'extérieur</label></div>
+        ${c.panel === false ? "" : `<label class="fld">Largeur : <b id="pwv">${c.panel_width ? c.panel_width + " px" : "automatique"}</b><input type="range" id="pw" min="200" max="700" step="10" value="${c.panel_width || 280}"></label><div class="btns"><button class="btn" id="pwa" ${c.panel_width ? "" : "disabled"}>Largeur automatique</button></div><p class="muted">Sur la carte, on peut aussi tirer le bord gauche du panneau ; ce réglage-là est propre à chaque utilisateur (double-clic pour revenir à celui-ci).</p>`}</div>
       <div class="props"><h4>Panneau « À regarder »</h4><div class="btns"><label class="chk2"><input type="checkbox" id="aa" ${al.auto === false ? "" : "checked"}> Équipements indisponibles et portes ouvertes</label><label class="chk2"><input type="checkbox" id="au" ${al.updates === false ? "" : "checked"}> Mises à jour disponibles</label></div>
         <div class="f2">${field("Piles faibles sous (%) — vide pour ignorer", `<input type="number" id="ab" min="0" max="100" value="${al.battery === false ? "" : al.battery ?? 20}">`)}</div>
         ${al.rules && al.rules.length ? `<p class="muted">${al.rules.length} règle(s) personnalisée(s) définie(s) en YAML.</p>` : ""}</div>`;
@@ -903,6 +905,9 @@ class PlanMaisonCardEditor extends HTMLElement {
     $("th").onchange = (e) => upd((c) => { if (e.target.value) c.theme = e.target.value; else delete c.theme; });
     $("hd").onchange = (e) => upd((c) => { if (e.target.checked) delete c.header; else c.header = false; });
     $("fo").onchange = (e) => upd((c) => { if (e.target.checked) delete c.fonts; else c.fonts = false; });
+    $("pn").onchange = (e) => upd((c) => { if (e.target.checked) delete c.panel; else c.panel = false; });
+    $("pr").onchange = (e) => upd((c) => { if (e.target.checked) c.panel_rooms = true; else delete c.panel_rooms; });
+    if ($("pw")) { $("pw").oninput = (e) => ($("pwv").textContent = e.target.value + " px"); $("pw").onchange = (e) => upd((c) => (c.panel_width = Number(e.target.value))); $("pwa").onclick = () => upd((c) => delete c.panel_width); }
     $("gd").onchange = (e) => upd((c) => { if (e.target.checked) { if (c.garden === false) delete c.garden; } else c.garden = false; });
     if ($("gl")) $("gl").onchange = (e) => upd((c) => { c.garden = Object.assign({}, c.garden || {}, { label: e.target.value }); });
     if ($("at")) $("at").onchange = (e) => upd((c) => { c.garden = Object.assign({}, c.garden || {}); if (e.target.checked) delete c.garden.trees; else c.garden.trees = []; });

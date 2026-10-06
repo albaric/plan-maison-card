@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.8.2
+
+- Vue d'ensemble épurée : elle ne montre plus que « À regarder » (plus de titre « N pièces, N équipements », de texte d'aide ni de liste des pièces). La liste des pièces revient avec `panel_rooms: true`.
+- Largeur de la vue d'ensemble réglable : dans l'éditeur (Réglages, curseur de 200 à 700 px, `panel_width`) ou en tirant le bord gauche du panneau sur la carte (mémorisé pour chaque utilisateur, double-clic pour revenir au réglage). La vue d'ensemble peut aussi être masquée (`panel: false`).
+
 ## 1.8.1
 
 - Caméras : nouvelle icône (caméra sur son support, objectif, champ de vision qui balaie, voyant d'enregistrement) en bleu quand elle fonctionne. Une caméra « idle » dans Home Assistant est en marche : elle s'affiche « En ligne » (ou « Enregistre », « En direct ») au lieu de « En veille ».

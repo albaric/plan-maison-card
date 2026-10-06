@@ -115,6 +115,9 @@ rooms:
 | `view` | calculé | Cadre visible `[x, y, largeur, hauteur]` en mètres. |
 | `theme` | `auto` | `auto`, `light` ou `dark`. |
 | `fonts` | `true` | `false` n'importe pas les polices Google (Barlow Condensed, Source Sans 3, JetBrains Mono). |
+| `panel` | `true` | `false` masque la vue d'ensemble (la liste « À regarder » à droite du plan). |
+| `panel_width` | auto | Largeur de la vue d'ensemble en pixels (200 à 700). Sur la carte, on peut aussi tirer le bord gauche du panneau : ce réglage est mémorisé pour chaque utilisateur, double-clic pour revenir à la valeur de la config. |
+| `panel_rooms` | `false` | `true` ajoute sous « À regarder » la liste des pièces et espaces extérieurs. |
 
 ### `rooms` — pièces
 
