@@ -1,5 +1,14 @@
 # Journal des versions
 
+## 1.1.0
+
+- **Éditeur visuel** dans la fenêtre « Modifier la carte » : dessin des pièces à la souris avec aimantation et cotes, portes, fenêtres et ouvertures posées sur les murs, espaces extérieurs, coins et murs déplaçables (les pièces voisines suivent), formes en L, zoom, annulation.
+- Onglets Équipements (ajout, placement, icône animée), Bandeau et Réglages.
+- Mobilier ajouté, déplacé et pivoté depuis l'éditeur.
+- Les réglages faits sur la carte (enregistrés par utilisateur) peuvent être intégrés à la configuration en un clic.
+- Un plan vide est accepté (message d'invitation à le dessiner).
+- Correctif : les raccourcis clavier du mode Mobilier ne fonctionnaient plus.
+
 ## 1.0.0
 
 Première version générique.

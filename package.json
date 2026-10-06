@@ -1,12 +1,12 @@
 {
   "name": "plan-maison-card",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Carte Lovelace : plan de maison interactif et éditable pour Home Assistant",
   "type": "module",
   "scripts": {
     "build": "esbuild src/card.js --bundle --minify --format=esm --target=es2020 --legal-comments=none --outfile=dist/plan-maison-card.js",
     "watch": "esbuild src/card.js --bundle --format=esm --target=es2020 --outfile=dist/plan-maison-card.js --watch",
-    "test": "node test/run.mjs"
+    "test": "node test/run.mjs && node test/editor.mjs"
   },
   "license": "MIT",
   "devDependencies": {

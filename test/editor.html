@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><title>plan-maison-card — banc d'essai de l'éditeur</title>
+<style>body{margin:0;background:#e9ecef;font-family:sans-serif}#wrap{display:grid;grid-template-columns:560px 1fr;gap:16px;padding:16px;align-items:start}#ed{background:#fff;padding:12px;border-radius:8px}body.dark{background:#111}body.dark #ed{background:#1c1c1c}</style>
+<script>
+customElements.define('ha-icon', class extends HTMLElement{ connectedCallback(){ this.style.cssText='display:inline-block;width:var(--mdc-icon-size,16px);height:var(--mdc-icon-size,16px);border-radius:3px;background:currentColor;opacity:.55'; } });
+customElements.define('ha-card', class extends HTMLElement{ connectedCallback(){ this.style.display='block'; } });
+</script></head><body><div id="wrap"><div id="ed"></div><div id="pv"></div></div>
+<script type="module" src="../dist/plan-maison-card.js"></script>
+<script type="module">
+import * as jsyaml from '../node_modules/js-yaml/dist/js-yaml.mjs';
+const q = new URLSearchParams(location.search);
+if (location.hash === '#dark') document.body.classList.add('dark');
+const S = (e, s, a={}) => [e, {entity_id:e, state:s, attributes:a, last_changed:new Date().toISOString()}];
+const states = Object.fromEntries([
+ S('light.lampe_canape','on'), S('switch.multiprise_sejour','on'), S('switch.prise_anti_moustiques','off'),
+ S('sensor.coordinateur_zigbee_temperature','66.1',{unit_of_measurement:'°C'}), S('sensor.passerelle_radio_temperature','77.8',{unit_of_measurement:'°C'}),
+ S('sensor.box_internet_debit_descendant','508',{unit_of_measurement:'kB/s'}), S('camera.sejour','idle'), S('sensor.sejour_temperature','23.8',{unit_of_measurement:'°C'}), S('sensor.sejour_humidite','75.1',{unit_of_measurement:'%'}),
+ S('sensor.sejour_batterie','39',{unit_of_measurement:'%'}), S('binary_sensor.baie_sejour','off',{device_class:'door'}), S('climate.poele','unavailable'),
+ S('binary_sensor.porte_entree_contact','on',{device_class:'door'}), S('switch.lumiere_entree','on'), S('binary_sensor.ecran_mural','on'), S('binary_sensor.ecran_mural_presence','off',{device_class:'occupancy'}),
+ S('switch.vanne_arrosage_lave_vaisselle','off'), S('sensor.serveur_memoire','93',{unit_of_measurement:'%'}), S('device_tracker.imprimante','home'),
+ S('sensor.salle_de_bain_temperature','23.2',{unit_of_measurement:'°C'}), S('sensor.salle_de_bain_humidite','81.5',{unit_of_measurement:'%'}), S('climate.salle_de_bain','off'),
+ S('switch.guirlande_pergola','on'), S('switch.eclairage_salon_jardin','off'), S('light.guinguette','on'), S('light.guirlande_terrasse','off'),
+ S('switch.spot_abri','off'), S('binary_sensor.porte_abri','off',{device_class:'door'}), S('sensor.onduleur_puissance','unavailable'),
+ S('switch.prise_exterieure','on'), S('camera.jardin_nord','idle'), S('camera.jardin_est','idle'), S('switch.arrosage_1','off'), S('switch.arrosage_2','off'), S('switch.vanne_arrosage','off'),
+ S('sensor.station_meteo_temperature', location.search.includes('storm')?'28.5':'12.4',{unit_of_measurement:'°C'}), S('sensor.temperature_ressentie','11.2',{unit_of_measurement:'°C'}), S('sensor.station_meteo_humidite','96',{unit_of_measurement:'%'}),
+ S('sensor.station_meteo_pression','1016.2',{unit_of_measurement:'hPa'}), S('sensor.station_meteo_batterie','100',{unit_of_measurement:'%'}), S('sensor.pluviometre_aujourd_hui','2.1',{unit_of_measurement:'mm'}),
+ S('sensor.pluviometre_hier','53.5',{unit_of_measurement:'mm'}), S('sensor.pluviometre_mois','115',{unit_of_measurement:'mm'}), S('sensor.anemometre_vitesse_moyenne', location.search.includes('storm')?'24':'3.4',{unit_of_measurement:'km/h'}),
+ S('sensor.anemometre_rafale','7.9',{unit_of_measurement:'km/h'}), S('sensor.vigilance_meteo','Vert'), S('sensor.pluviometre_intensite', location.search.includes('storm')?'1.2':'0',{unit_of_measurement:'mm/h'}), S('sensor.probabilite_pluie','30',{unit_of_measurement:'%'}), S('sensor.indice_uv','2'),
+ S('sensor.coordinateur_zigbee_connexion','wifi'), S('update.serveur_fichiers','on'), S('sensor.vanne_arrosage_batterie','57',{unit_of_measurement:'%'}), S('media_player.tv_chambre','unavailable'), S('light.ampoule_couleur','off')
+,
+ S('light.salon','on'), S('switch.prise_cuisine','off'), S('light.guirlande_terrasse','on'), S('sensor.exterieur_temperature','24.5',{unit_of_measurement:'°C',device_class:'temperature'}), S('sensor.exterieur_humidity','58',{unit_of_measurement:'%',device_class:'humidity'}), S('binary_sensor.porte_entree','off',{device_class:'door'}),
+ S('sensor.telecommande_battery','12',{unit_of_measurement:'%',device_class:'battery',friendly_name:'Télécommande'}), S('update.home_assistant_core_update','on',{title:'Home Assistant Core',latest_version:'2026.10.1'})
+]);
+window.calls=[]; window.store = window.store || {};
+if (q.get('layout')) store[q.get('layout')] = { axes: {}, pos: { lampe: [20, 20] }, furn: {}, added: [{ id: 'axx', type: 'piano', x: 60, y: 20, rot: 0 }], devAdded: [], devHidden: {}, names: { sejour: 'Grand séjour' }, icons: { lampe: 'bulbrgb' } };
+const hass = { states, themes:{darkMode: location.hash==='#dark'},
+  callService:(d,s,data)=>{ calls.push([d,s,data]); },
+  callWS:async(m)=>{ if(m.type==='frontend/get_user_data') return {value: store[m.key]||null}; if(m.type==='frontend/set_user_data'){ store[m.key]=JSON.parse(JSON.stringify(m.value)); return {}; } } };
+await customElements.whenDefined('plan-maison-card');
+const C = customElements.get('plan-maison-card');
+const name = q.get('cfg') || 'stub';
+let cfg = name === 'stub' ? C.getStubConfig() : name === 'empty' ? { rooms: [] } : jsyaml.load(await (await fetch('../examples/' + name + '.yaml')).text());
+cfg.type = 'custom:plan-maison-card';
+window.cfg = cfg; window.changes = 0;
+const ed = C.getConfigElement(); window.ed = ed;
+const card = document.createElement('plan-maison-card'); window.card = card;
+ed.setConfig(cfg); document.getElementById('ed').appendChild(ed); ed.hass = hass;
+card.setConfig(cfg); document.getElementById('pv').appendChild(card); card.hass = hass;
+// comme hui-element-editor : la config émise est renvoyée à l'éditeur et à l'aperçu
+ed.addEventListener('config-changed', (e) => { window.changes++; window.cfg = e.detail.config; ed.setConfig(e.detail.config); try { card.setConfig(e.detail.config); window.cardErr = null; } catch (x) { window.cardErr = x.message; } });
+</script></body></html>

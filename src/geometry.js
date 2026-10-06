@@ -53,9 +53,9 @@ export function buildModel(cfg) {
     axes[k] = { dir: o.dir || null, def: round(num(o.value) * M), label: o.label || "" };
   }
   const auto = cfg.auto_axes != null ? !!cfg.auto_axes : !declared;
-  if (!Array.isArray(cfg.rooms) || !cfg.rooms.length) throw new Error("Il faut au moins une pièce dans « rooms ».");
+  if (cfg.rooms != null && !Array.isArray(cfg.rooms)) throw new Error("« rooms » doit être une liste de pièces.");
 
-  const rooms = cfg.rooms.map((r, i) => {
+  const rooms = (cfg.rooms || []).map((r, i) => {
     const raw = r.points || (r.rect && rectPts(r.rect));
     if (!raw) throw new Error(`Pièce ${r.name || i + 1} : il faut « points » ou « rect ».`);
     return {

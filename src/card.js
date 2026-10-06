@@ -5,8 +5,9 @@ import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG } from "./styles.js";
 import * as G from "./geometry.js";
 import { toYaml } from "./yaml.js";
 import { STUB } from "./stub.js";
+import "./editor.js";
 
-export const VERSION = "1.0.0";
+export const VERSION = "1.1.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -35,6 +36,7 @@ function widgetType(st, entity) {
 
 class PlanMaisonCard extends HTMLElement {
   static getStubConfig() { return JSON.parse(JSON.stringify(STUB)); }
+  static getConfigElement() { return document.createElement("plan-maison-card-editor"); }
   getCardSize() { return 16; }
   getGridOptions() { return { columns: "full", rows: "auto" }; }
 
@@ -68,6 +70,7 @@ class PlanMaisonCard extends HTMLElement {
     m.devices.forEach((d) => d.pos && pts.push(d.pos));
     m.garlands.forEach((l) => l.pts.forEach((p) => pts.push(p)));
     if (m.garden) m.garden.trees.forEach((t) => pts.push([t[0] - t[2], t[1] - t[2]], [t[0] + t[2], t[1] + t[2]]));
+    if (!pts.length) return [-20, -20, 190, 140];
     const b = G.bboxPts(pts), pad = Math.max(12, 0.12 * Math.max(b.X - b.x, b.Y - b.y));
     // échelle minimale : une petite maison garde des murs et des textes à taille raisonnable
     let w = b.X - b.x + 2 * pad, h = b.Y - b.y + 2 * pad + 22, x = b.x - pad, y = b.y - pad;
@@ -117,7 +120,7 @@ class PlanMaisonCard extends HTMLElement {
     $("dev-reset").addEventListener("click", () => this._confirm($("dev-reset"), () => { this._L.pos = {}; this._L.devAdded = []; this._L.devHidden = {}; this._L.icons = {}; this._save(); this._build(); this._panel(); }));
     $("dev-restore").addEventListener("click", () => { const id = $("restore").value; if (!id) return; delete this._L.devHidden[id]; this._save(); this._build(); });
     $("dev-add").addEventListener("click", () => this._addDev());
-    this._kd = (e) => this._key(e); document.addEventListener("keydown", this._kd);
+    this._kd = (e) => this._keydown(e); document.addEventListener("keydown", this._kd);
   }
   _head() {
     const c = this._config;
@@ -131,8 +134,12 @@ class PlanMaisonCard extends HTMLElement {
     Object.keys(this._L.axes || {}).forEach((k) => { if (k in this._AX) this._AX[k] = this._L.axes[k]; });
     this._theme(); this._head(); this._geo(); this._build(); this._meteo(); this._panel();
   }
-  connectedCallback() { if (this._kd) { document.removeEventListener("keydown", this._kd); document.addEventListener("keydown", this._kd); } }
-  disconnectedCallback() { if (this._kd) document.removeEventListener("keydown", this._kd); }
+  connectedCallback() {
+    if (this._kd) { document.removeEventListener("keydown", this._kd); document.addEventListener("keydown", this._kd); }
+    if (!this._rs) this._rs = (e) => { if (!this._L || !e.detail || e.detail.key !== this._key) return; this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} }; if (this._built) this._reconfig(); };
+    window.addEventListener("plan-maison-layout-reset", this._rs);
+  }
+  disconnectedCallback() { if (this._kd) document.removeEventListener("keydown", this._kd); if (this._rs) window.removeEventListener("plan-maison-layout-reset", this._rs); }
   _confirm(btn, fn) {
     if (btn.dataset.arm !== "1") { btn.dataset.arm = "1"; const t = btn.textContent; btn.dataset.t = t; btn.textContent = "Confirmer"; setTimeout(() => { if (btn.dataset.arm === "1") { btn.dataset.arm = ""; btn.textContent = t; } }, 3000); return; }
     btn.dataset.arm = ""; btn.textContent = btn.dataset.t || btn.textContent; fn();
@@ -399,6 +406,10 @@ class PlanMaisonCard extends HTMLElement {
       }
     });
     this._lightsDraw(g);
+    if (!m.rooms.length) {
+      el("text", { x: V[0] + V[2] / 2, y: V[1] + V[3] / 2 - 4, "text-anchor": "middle", class: "lab", "font-size": 5 }, g).textContent = "Plan vide";
+      el("text", { x: V[0] + V[2] / 2, y: V[1] + V[3] / 2 + 3, "text-anchor": "middle", class: "glab", "font-size": 3 }, g).textContent = "Modifie la carte pour dessiner tes pièces dans l'éditeur visuel.";
+    }
     m.rooms.forEach((r) => {
       const [x, y] = this._LB[r.id], fs = this._LS[r.id], a = Math.round(G.area(this._P[r.id]) * 2) / 2;
       el("text", { x, y, "text-anchor": "middle", class: "lab" + (f === r.id ? " sel" : ""), "font-size": fs }, g).textContent = this._rname(r);
@@ -701,7 +712,7 @@ class PlanMaisonCard extends HTMLElement {
     if (it.added) this._L.added = this._L.added.filter((a) => a.id !== it.id); else this._L.furn[it.id] = Object.assign({}, this._L.furn[it.id] || {}, { del: true });
     this._save(); this._pop.hidden = true; this._sel = null; this._build();
   }
-  _key(e) {
+  _keydown(e) {
     if (this._mode !== "furn" || !this._sel || this._sel.k !== "f") return;
     if ((e.composedPath ? e.composedPath() : []).some((n) => ["INPUT", "SELECT", "TEXTAREA"].includes(n.tagName))) return;
     const it = this._furn().find((x) => x.id === this._sel.id); if (!it) return;

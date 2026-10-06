@@ -39,9 +39,25 @@ HACS déclare la ressource `/hacsfiles/plan-maison-card/plan-maison-card.js` tou
 2. Paramètres → Tableaux de bord → ⋮ → **Ressources** → Ajouter : URL `/local/plan-maison-card.js`, type **Module JavaScript**.
 3. Recharge le navigateur.
 
-## Démarrage rapide
+## Démarrage rapide : dessiner son plan à la souris
 
-Ajoute une carte **Plan maison** depuis le sélecteur de cartes : un petit plan d'exemple s'affiche. Ouvre ensuite l'éditeur YAML de la carte et pars de [`examples/simple.yaml`](examples/simple.yaml). Un exemple complet (11 pièces, cloisons nommées, 38 équipements, bandeau météo, règles d'alerte) est dans [`examples/complete.yaml`](examples/complete.yaml).
+1. Tableau de bord → crayon (Modifier) → **Ajouter une carte** → **Plan maison**.
+2. L'**éditeur visuel** s'ouvre à gauche, l'aperçu à droite. Il part d'un petit plan d'exemple : garde-le, modifie-le ou clique sur **Tout effacer**.
+3. Onglet **Plan** :
+   - outil **Pièce** : fais glisser pour dessiner une pièce rectangulaire. Les bords s'aimantent aux murs existants, les dimensions s'affichent en mètres. Donne-lui un nom et un type dans le panneau du dessous (ou tape ses cotes exactes) ;
+   - outils **Porte**, **Fenêtre**, **Ouverture** : touche un mur pour l'y poser, puis règle largeur, arc d'ouverture et libellé ;
+   - outil **Extérieur** : terrasse, pergola, abri, piscine, potager, allée ;
+   - outil **Sélection** : glisse une pièce, un coin (rond) ou un mur (carré). Déplacer un mur commun déplace les deux pièces et ses portes. Double-clic sur un mur pour ajouter un coin (forme en L). Molette pour zoomer, glisser le fond pour déplacer la vue, Ctrl+Z pour annuler ;
+   - **Ajouter un meuble…** ouvre la bibliothèque ; un meuble se glisse, R le pivote, Suppr l'enlève.
+4. Onglet **Équipements** : ajoute tes entités, puis **Placer** et glisse la pastille sur le plan. Touche-la pour choisir son icône animée.
+5. Onglets **Bandeau** (tuiles météo ou capteurs) et **Réglages** (titre, thème, jardin, alertes).
+6. **Enregistrer**.
+
+Les murs se tracent tout seuls : épais en façade, fins entre deux pièces.
+
+![Éditeur visuel](docs/editeur.png)
+
+Tout reste aussi faisable en YAML (bouton « Afficher l'éditeur de code » de Home Assistant) : pars de [`examples/simple.yaml`](examples/simple.yaml), ou de l'exemple complet [`examples/complete.yaml`](examples/complete.yaml) (11 pièces, cloisons nommées, 38 équipements, bandeau météo, règles d'alerte). Un plan à cloisons nommées reste modifiable dans l'éditeur visuel : au premier déplacement de mur, il est converti en cotes simples.
 
 La carte occupe toute la largeur. Dans une vue « Panneau » ou « Sections », elle s'adapte ; sous 860 px de large, le panneau latéral passe sous le plan.
 
@@ -223,7 +239,9 @@ Conditions : `state` (valeur ou liste), `not`, `above`, `below`. Niveaux : `na` 
 | **Mobilier** | Glisser un meuble ; le toucher pour le pivoter ou le retirer ; clavier : flèches (Maj = 50 cm), R, Suppr ; « Ajouter un meuble… » ouvre la bibliothèque. |
 | **Murs** | Glisser les poignées bleues ; tableau des surfaces. |
 
-**Exporter** ouvre la configuration YAML complète avec la disposition actuelle. Colle-la dans l'éditeur de la carte pour la figer, ou sur un autre Home Assistant pour reproduire le plan.
+Ces réglages faits directement sur la carte sont enregistrés **pour ton compte**. Pour les rendre définitifs pour tout le monde, ouvre l'éditeur visuel de la carte : un bandeau propose de **les intégrer** à la configuration.
+
+**Exporter** ouvre la configuration YAML complète avec la disposition actuelle, pour la partager ou la reproduire sur un autre Home Assistant.
 
 ### Icônes animées
 
@@ -241,12 +259,12 @@ L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, 
 npm install
 npm run build        # dist/plan-maison-card.js
 npm run watch        # reconstruction à chaque modification
-python3 -m http.server 8790 & npm test   # banc d'essai Playwright (test/index.html)
+python3 -m http.server 8790 & npm test   # bancs d'essai Playwright : carte (test/index.html) et éditeur (test/editor.html)
 ```
 
 Le banc d'essai `test/index.html?cfg=simple` charge un exemple avec un faux objet `hass`, sans Home Assistant.
 
-Le code est découpé en modules dans `src/` : `geometry.js` (lecture de la config, murs, axes), `card.js` (élément personnalisé), `icons.js`, `furniture.js`, `styles.js`, `yaml.js`.
+Le code est découpé en modules dans `src/` : `geometry.js` (lecture de la config, murs, axes), `card.js` (la carte), `editor.js` (l'éditeur visuel), `icons.js`, `furniture.js`, `styles.js`, `yaml.js`.
 
 ## Licence
 
