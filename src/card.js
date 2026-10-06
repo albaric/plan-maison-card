@@ -9,7 +9,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.7.1";
+export const VERSION = "1.8.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -444,7 +444,7 @@ class PlanMaisonCard extends HTMLElement {
     m.rooms.forEach((r) => {
       const [x, y] = this._LB[r.id], fs = this._LS[r.id], a = Math.round(G.area(this._P[r.id]) * 2) / 2;
       el("text", { x, y, "text-anchor": "middle", class: "lab" + (f === r.id ? " sel" : ""), "font-size": fs }, g).textContent = this._rname(r);
-      el("text", { x, y: y + fs * 0.95, "text-anchor": "middle", class: "area", "font-size": Math.max(1.9, fs * 0.62) }, g).textContent = (r.area != null ? "" : "≈ ") + fr(a) + " m²";
+      el("text", { x, y: y + fs * 0.95, "text-anchor": "middle", class: "area", "font-size": Math.max(1.9, fs * 0.62) }, g).textContent = (r.area != null ? fr(r.area) : "≈ " + fr(a)) + " m²";
     });
   }
   _lightsDraw(g) {
@@ -675,7 +675,7 @@ class PlanMaisonCard extends HTMLElement {
       let head, extra = "";
       if (r) {
         const a = Math.round(G.area(this._P[f]) * 2) / 2;
-        head = `<div class="eyebrow">${G.KIND_LABEL[r.kind]} · ${r.area != null ? "" : "≈ "}${fr(a)} m²</div><h2>${esc(this._rname(r))}</h2>`;
+        head = `<div class="eyebrow">${G.KIND_LABEL[r.kind]} · ${r.area != null ? fr(r.area) : "≈ " + fr(a)} m²</div><h2>${esc(this._rname(r))}</h2>`;
         const rd = devs.filter((d) => { const st = this._hass.states[d.entity]; const dc = st && st.attributes.device_class; return dc === "temperature" || dc === "humidity" || d.wg === "temp" || d.wg === "hum"; }).slice(0, 4);
         if (rd.length) extra = `<div class="readings">${rd.map((d) => { const st = this._hass.states[d.entity]; return `<div class="rd"><div class="k">${(st && st.attributes.device_class === "humidity") || d.wg === "hum" ? "Humidité" : "Température"}</div><div class="v">${esc(this._fmt(st))}</div></div>`; }).join("")}</div>`;
         if (r.kind === "todo") extra += '<p class="muted">Espace dont l\'usage reste à préciser.</p>';

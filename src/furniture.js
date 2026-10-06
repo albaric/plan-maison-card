@@ -20,6 +20,8 @@ export const META = {
   tapisrond: ["Tapis rond", "salon", 12, 12, "oc", "bleu"],
   poele: ["Poêle", "salon", 5.6, 5.6, "o"],
   plante: ["Plante", "salon", 4, 4, "o"],
+  escalier: ["Escalier droit", "salon", 9, 30, "s"],
+  escalierquart: ["Escalier quart tournant", "salon", 22, 26, "s"],
   grandeplante: ["Grande plante", "salon", 7, 7, "o"],
   // repas
   table: ["Table", "repas", 8, 14, "s"],
@@ -83,6 +85,8 @@ export const META = {
   hamac: ["Hamac", "jardin", 24, 7, "c", "moutarde"],
   trampoline: ["Trampoline", "jardin", 30, 30, "o"],
   tondeuse: ["Robot tondeuse", "jardin", 6, 5, ""],
+  voiture: ["Voiture", "jardin", 18, 45, "c", "bleu"],
+  velo: ["Vélo", "jardin", 6, 18, "c", "corail"],
 };
 
 export const CATS = [["salon", "Salon"], ["repas", "Repas"], ["chambre", "Chambre"], ["bureau", "Bureau"], ["cuisine", "Cuisine"], ["sdb", "Salle de bain"], ["jardin", "Jardin"]];

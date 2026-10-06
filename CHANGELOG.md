@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.8.0
+
+- Nouveaux meubles : escalier droit et escalier quart tournant (pour les maisons à étage), voiture et vélo (pour le garage). 77 meubles au catalogue.
+- La surface déclarée d'une pièce (`area`, celle du plan de l'architecte par exemple) s'affiche sur le plan et dans le panneau à la place de la surface calculée ; sans `area`, la surface calculée reste affichée avec « ≈ ».
+
 ## 1.7.1
 
 - Toucher une terrasse, la pergola ou une pièce liste aussi les guirlandes qui y sont accrochées, avec leur interrupteur ; survoler la ligne surligne la guirlande sur le plan. Elles comptent dans le nombre d'équipements de chaque pièce ou espace.

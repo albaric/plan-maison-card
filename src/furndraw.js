@@ -532,6 +532,36 @@ function mower(w, h) {
   return E(w / 2, h / 2, w / 2, h / 2, "#3f9b62", "#24603a", 0.15) + E(w / 2, h * 0.45, w * 0.36, h * 0.3, "#5cc27e", null, 0, { opacity: 0.8 }) + R(w * 0.38, h * 0.3, w * 0.24, h * 0.22, 0.2, "#1f2328") + C(w * 0.5, h * 0.41, 0.15, "#ff5a3a", null, 0, { class: "glowl" }) + R(-0.2, h * 0.62, 0.6, 1.2, 0.2, "#222") + R(w - 0.4, h * 0.62, 0.6, 1.2, 0.2, "#222");
 }
 
+
+/* ---------- escaliers et garage ---------- */
+function stairsStraight(w, h) {
+  const n = Math.max(4, Math.round(h / 2.6)); let s = R(0, 0, w, h, 0.2, "#efe4d2", "#b9a68a", 0.15);
+  for (let i = 1; i < n; i++) { const y = (h * i) / n; s += L(0.2, y, w - 0.2, y, "#b9a68a", 0.1) + R(0.2, y - h / n, w - 0.4, 0.25, 0, "#fff", null, 0, { opacity: 0.35 }); }
+  s += L(0.25, 0.3, 0.25, h - 0.3, WAL, 0.3) + L(w / 2, h - 1, w / 2, 1.6, "#4f5965", 0.18) + P(`M${n2(w / 2 - 0.7)} 2.4L${n2(w / 2)} 1.2L${n2(w / 2 + 0.7)} 2.4`, null, "#4f5965", 0.18);
+  return s;
+}
+function stairsQuarter(w, h) {
+  const d = Math.min(w, h) * 0.42; let s = P(`M0 0H${n2(w)}V${n2(d)}H${n2(d)}V${n2(h)}H0z`, "#efe4d2", "#b9a68a", 0.15);
+  const nh = Math.max(3, Math.round((w - d) / 2.6)), nv = Math.max(3, Math.round((h - d) / 2.6));
+  for (let i = 0; i <= nh; i++) { const x = d + ((w - d) * i) / nh; s += L(x, 0.15, x, d - 0.15, "#b9a68a", 0.1); }
+  for (let i = 0; i <= nv; i++) { const y = d + ((h - d) * i) / nv; s += L(0.15, y, d - 0.15, y, "#b9a68a", 0.1); }
+  for (let k = 1; k < 4; k++) { const a = (k * 22.5 * Math.PI) / 180; s += L(d, d, d - Math.cos(a) * d * 1.1, d - Math.sin(a) * d * 1.1, "#b9a68a", 0.1); }
+  s += P(`M${n2(d / 2)} ${n2(h - 1)}V${n2(d / 2)}H${n2(w - 1.4)}`, null, "#4f5965", 0.18) + P(`M${n2(w - 2.4)} ${n2(d / 2 - 0.7)}L${n2(w - 1.2)} ${n2(d / 2)}L${n2(w - 2.4)} ${n2(d / 2 + 0.7)}`, null, "#4f5965", 0.18);
+  return s + P(`M${n2(d)} ${n2(h)}V${n2(d)}H${n2(w)}`, null, WAL, 0.3);
+}
+function car(w, h, c) {
+  const r = Math.min(w * 0.45, 3.2); let s = R(-0.25, h * 0.16, w + 0.5, 2.2, 0.5, "#22272e") + R(-0.25, h * 0.7, w + 0.5, 2.2, 0.5, "#22272e");
+  s += R(0, 0, w, h, r, c, dk(c, 0.35), 0.18) + R(w * 0.12, h * 0.05, w * 0.76, h * 0.12, r * 0.5, lt(c, 0.25), null, 0, { opacity: 0.6 });
+  s += P(`M${n2(w * 0.12)} ${n2(h * 0.3)}Q${n2(w / 2)} ${n2(h * 0.24)} ${n2(w * 0.88)} ${n2(h * 0.3)}L${n2(w * 0.8)} ${n2(h * 0.4)}H${n2(w * 0.2)}z`, "#33414f", "#1e2730", 0.1);
+  s += R(w * 0.18, h * 0.4, w * 0.64, h * 0.32, 1, dk(c, 0.12), dk(c, 0.3), 0.1) + R(w * 0.24, h * 0.44, w * 0.2, h * 0.1, 0.5, lt(c, 0.3), null, 0, { opacity: 0.5 });
+  s += P(`M${n2(w * 0.2)} ${n2(h * 0.72)}H${n2(w * 0.8)}L${n2(w * 0.86)} ${n2(h * 0.84)}Q${n2(w / 2)} ${n2(h * 0.88)} ${n2(w * 0.14)} ${n2(h * 0.84)}z`, "#33414f", "#1e2730", 0.1);
+  s += R(-0.5, h * 0.33, 0.7, 0.9, 0.3, dk(c, 0.2)) + R(w - 0.2, h * 0.33, 0.7, 0.9, 0.3, dk(c, 0.2));
+  return s + C(w * 0.18, h * 0.02 + 0.5, 0.45, "#fff7c9", "#c9b45a", 0.06) + C(w * 0.82, h * 0.02 + 0.5, 0.45, "#fff7c9", "#c9b45a", 0.06) + R(w * 0.15, h - 0.6, w * 0.15, 0.4, 0.15, "#e5483a") + R(w * 0.7, h - 0.6, w * 0.15, 0.4, 0.15, "#e5483a");
+}
+function bike(w, h, c) {
+  const cx = w / 2; return E(cx, h * 0.15, 0.25, h * 0.13, "#2a2e33") + E(cx, h * 0.85, 0.25, h * 0.13, "#2a2e33") + L(cx, h * 0.15, cx, h * 0.85, c, 0.4) + L(cx - w * 0.4, h * 0.22, cx + w * 0.4, h * 0.22, "#3a3f47", 0.3) + E(cx, h * 0.6, 0.45, 0.9, "#2a2e33");
+}
+
 export const DRAW = {
   canape: (w, h, c) => sofa(w, h, c), canapeangle: sofaCorner, fauteuil: armchair, pouf, tablebasse: coffeeTable, tablebasseronde: coffeeRound,
   meubletv: tvStand, tvx: tv, biblio: bookcase, cheminee: fireplace, poele: stove, piano, lampadaire: floorLamp, tapis: rug, tapisrond: rugRound, plante: plant, grandeplante: bigPlant,
@@ -543,5 +573,5 @@ export const DRAW = {
   baignoirex: bathtub, douchex: shower, lavabo: basin, meublevasque: vanity, wcx: toilet, secheserviette: towelRail, tapisbain: bathMat,
   lavelinge: (w, h) => washer(w, h, false), seche: (w, h) => washer(w, h, true), radiateurx: radiator,
   transat: lounger, salonjardin: gardenLounge, tablejardin: gardenTable, parasol, barbecue: bbq, brasero, piscine: pool, spa, pergola, potager: vegPatch,
-  massif: flowerBed, lavandes: lavenders, haie: hedge, olivier: olive, palmier: palm, fruitier: fruitTree, potfleurs: flowerPot, hamac: hammock, trampoline, tondeuse: mower,
+  massif: flowerBed, lavandes: lavenders, haie: hedge, olivier: olive, palmier: palm, fruitier: fruitTree, potfleurs: flowerPot, hamac: hammock, trampoline, tondeuse: mower, escalier: stairsStraight, escalierquart: stairsQuarter, voiture: car, velo: bike,
 };

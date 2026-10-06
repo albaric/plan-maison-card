@@ -14,7 +14,7 @@ Tout se règle en YAML, puis s'ajuste à la souris directement sur le plan : clo
 - **Mode Murs** : chaque cloison a une poignée. Les pièces, portes et fenêtres qui en dépendent suivent, et les cloisons voisines sont poussées si besoin. Un tableau compare les surfaces calculées à celles que tu as indiquées.
 - **Équipements animés** : 46 icônes animées en couleur, rangées par familles (lumière, ouvrants, sécurité, chauffage, eau, cuisine, multimédia, réseau…) : l'ampoule rayonne, la porte s'ouvre, l'aspirateur roule, le robinet coule, la caméra balaie ; un halo de la couleur de la famille signale les appareils actifs. L'icône est devinée d'après l'entité, et tu peux en changer en touchant la pastille en mode Équipements.
 - **Widgets météo** sur le plan : thermomètre, anémomètre (vitesse de rotation liée au vent), pluviomètre (le bocal se remplit), baromètre (aiguille), hygromètre (goutte qui se remplit selon l'humidité, couleur de sec à humide, bulles au-delà de 65 %). Ils sont choisis automatiquement selon la classe du capteur.
-- **Mobilier** illustré, un dessin par meuble : 73 meubles rangés par pièce (salon, repas, chambre, bureau, cuisine, salle de bain, jardin), avec leurs détails (vaisselle, livres, serviettes, canard dans le bain, potager, piscine, pergola en glycine…). Plans de travail, piscine, potager, haie… se redimensionnent ; canapés, lits, tapis… changent de couleur.
+- **Mobilier** illustré, un dessin par meuble : 77 meubles rangés par pièce (salon, repas, chambre, bureau, cuisine, salle de bain, jardin), avec leurs détails (vaisselle, livres, serviettes, canard dans le bain, potager, piscine, pergola en glycine…). Plans de travail, piscine, potager, haie… se redimensionnent ; canapés, lits, tapis… changent de couleur.
 - **Guirlandes lumineuses** dessinées sur le plan, qui s'allument avec leur entité.
 - **Bandeau** de tuiles (météo ou autres capteurs) et panneau **« À regarder »** : équipements indisponibles, portes ouvertes, piles faibles, mises à jour, plus tes propres règles.
 - Thème clair et sombre (suit Home Assistant), animations coupées si le système demande moins de mouvement.
@@ -125,7 +125,7 @@ rooms:
 | `kind` | Couleur de la pièce : `jour`, `nuit`, `eau`, `service`, `circ` (circulation), `todo` (hachuré). Synonymes anglais : `living`, `bedroom`, `bathroom`, `utility`, `hall`, `unknown`. |
 | `rect` | `[x1, y1, x2, y2]` pour une pièce rectangulaire… |
 | `points` | …ou la liste des sommets `[[x, y], …]` pour toute autre forme. |
-| `area` | Surface de référence en m², comparée à la surface calculée en mode Murs. |
+| `area` | Surface de référence en m² (celle du plan de l’architecte, par exemple) : elle s’affiche sur le plan à la place de la surface calculée, et le mode Murs compare les deux. |
 | `label` | Position du nom `[x, y]` ; sinon placée automatiquement en évitant meubles et pastilles. |
 | `label_size` | Hauteur maximale du nom en mètres. |
 
@@ -253,7 +253,7 @@ L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, 
 
 ### Catalogue de mobilier
 
-**Salon** : `canape` Canapé ↔ 🎨 · `canapeangle` Canapé d'angle 🎨 · `fauteuil` Fauteuil 🎨 · `pouf` Pouf 🎨 · `tablebasse` Table basse ↔ · `tablebasseronde` Table basse ronde · `meubletv` Meuble TV ↔ · `tvx` Télévision ↔ · `biblio` Bibliothèque ↔ · `cheminee` Cheminée · `piano` Piano · `lampadaire` Lampadaire · `tapis` Tapis ↔ 🎨 · `tapisrond` Tapis rond 🎨 · `poele` Poêle · `plante` Plante · `grandeplante` Grande plante
+**Salon** : `canape` Canapé ↔ 🎨 · `canapeangle` Canapé d'angle 🎨 · `fauteuil` Fauteuil 🎨 · `pouf` Pouf 🎨 · `tablebasse` Table basse ↔ · `tablebasseronde` Table basse ronde · `meubletv` Meuble TV ↔ · `tvx` Télévision ↔ · `biblio` Bibliothèque ↔ · `cheminee` Cheminée · `piano` Piano · `lampadaire` Lampadaire · `tapis` Tapis ↔ 🎨 · `tapisrond` Tapis rond 🎨 · `poele` Poêle · `plante` Plante · `escalier` Escalier droit ↔ · `escalierquart` Escalier quart tournant ↔ · `grandeplante` Grande plante
 
 **Repas** : `table` Table ↔ · `tablerepas` Table et 6 chaises 🎨 · `tableronde` Table ronde · `tablerondechaises` Table ronde et 4 chaises 🎨 · `chaise` Chaise 🎨
 
@@ -265,7 +265,7 @@ L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, 
 
 **Salle de bain** : `baignoirex` Baignoire · `douchex` Douche ↔ · `lavabo` Lavabo · `meublevasque` Meuble double vasque ↔ · `wcx` WC · `secheserviette` Sèche-serviettes 🎨 · `tapisbain` Tapis de bain 🎨 · `lavelinge` Lave-linge · `seche` Sèche-linge · `radiateurx` Radiateur ↔
 
-**Jardin** : `transat` Transat 🎨 · `salonjardin` Salon de jardin 🎨 · `tablejardin` Table de jardin · `parasol` Parasol 🎨 · `barbecue` Barbecue · `brasero` Brasero · `piscine` Piscine ↔ · `spa` Spa · `pergola` Pergola glycine ↔ · `potager` Potager ↔ · `massif` Massif fleuri ↔ · `lavandes` Rang de lavandes ↔ · `haie` Haie ↔ · `olivier` Olivier · `palmier` Palmier · `fruitier` Arbre fruitier · `potfleurs` Pot de fleurs 🎨 · `hamac` Hamac 🎨 · `trampoline` Trampoline · `tondeuse` Robot tondeuse
+**Jardin** : `transat` Transat 🎨 · `salonjardin` Salon de jardin 🎨 · `tablejardin` Table de jardin · `parasol` Parasol 🎨 · `barbecue` Barbecue · `brasero` Brasero · `piscine` Piscine ↔ · `spa` Spa · `pergola` Pergola glycine ↔ · `potager` Potager ↔ · `massif` Massif fleuri ↔ · `lavandes` Rang de lavandes ↔ · `haie` Haie ↔ · `olivier` Olivier · `palmier` Palmier · `fruitier` Arbre fruitier · `potfleurs` Pot de fleurs 🎨 · `hamac` Hamac 🎨 · `trampoline` Trampoline · `tondeuse` Robot tondeuse · `voiture` Voiture 🎨 · `velo` Vélo 🎨
 
 ↔ redimensionnable (`w`, `h`) · 🎨 couleur au choix (`color`) : `canard`, `bleu`, `ciel`, `marine`, `sauge`, `vert`, `moutarde`, `corail`, `terracotta`, `rose`, `lavande`, `gris`, `anthracite`, `lin` ou une couleur `#rrggbb`.
 
