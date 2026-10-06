@@ -185,7 +185,8 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (!c.furniture.length) delete c.furniture;
     if (!c.rooms) c.rooms = [];
     this._cfg = c; this._emitted = JSON.stringify(c);
-    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: c }, bubbles: true, composed: true }));
+    // Home Assistant gèle (Object.freeze) la config reçue : on lui passe une copie pour garder la nôtre modifiable
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: clone(c) }, bubbles: true, composed: true }));
   }
   _push() { this._undo.push(JSON.stringify({ cfg: this._cfg, S: this._S, g: this._geoDirty, z: this._zonesDirty, l: this._garDirty })); if (this._undo.length > 60) this._undo.shift(); }
   _back() {

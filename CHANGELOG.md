@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.5.1
+
+- Correction : dans Home Assistant, après une première modification, l'onglet Bandeau ne réagissait plus (ajout d'une deuxième tuile, titre, ordre, suppression) et l'onglet Réglages non plus. Home Assistant verrouille la configuration que l'éditeur lui transmet ; l'éditeur lui envoie désormais une copie.
+- Le banc d'essai de l'éditeur verrouille la configuration comme Home Assistant, et teste l'enchaînement ajout, renommage, déplacement et suppression de tuiles.
+
 ## 1.5.0
 
 - Icônes animées entièrement redessinées, en couleur : 46 icônes (14 nouvelles : borne de recharge, porte de garage, serrure, sonnette, thermostat, pompe à chaleur, purificateur, piscine, lave-linge, réfrigérateur, four, cafetière, aspirateur, enceinte).

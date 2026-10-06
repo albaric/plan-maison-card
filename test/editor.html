@@ -46,5 +46,7 @@ const card = document.createElement('plan-maison-card'); window.card = card;
 ed.setConfig(cfg); document.getElementById('ed').appendChild(ed); ed.hass = hass;
 card.setConfig(cfg); document.getElementById('pv').appendChild(card); card.hass = hass;
 // comme hui-element-editor : la config émise est renvoyée à l'éditeur et à l'aperçu
-ed.addEventListener('config-changed', (e) => { window.changes++; window.cfg = e.detail.config; ed.setConfig(e.detail.config); try { card.setConfig(e.detail.config); window.cardErr = null; } catch (x) { window.cardErr = x.message; } });
+const deepFreeze = (o) => { if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); Object.values(o).forEach(deepFreeze); } return o; };
+window.addEventListener('error', (e) => { (window.jsErr = window.jsErr || []).push(e.message); });
+ed.addEventListener('config-changed', (e) => { window.changes++; deepFreeze(e.detail.config); /* comme Home Assistant */ window.cfg = e.detail.config; ed.setConfig(e.detail.config); try { card.setConfig(e.detail.config); window.cardErr = null; } catch (x) { window.cardErr = x.message; } });
 </script></body></html>

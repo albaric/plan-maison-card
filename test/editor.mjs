@@ -122,6 +122,15 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   const bc = await cfg(p);
   check("deux tuiles ajoutées, valeur insérée dans la bonne tuile", tiles === 2 && bc.banner.length === 2 && bc.banner[1].entity === "sensor.exterieur_humidity" && /\{sensor.telecommande_battery\}/.test(bc.banner[0].secondary || ""), { tiles, b: bc.banner });
   c = await cfg(p); check("tuile de bandeau", c.banner && c.banner[0].entity === "sensor.exterieur_temperature", c.banner);
+  await setInput(p, "#p-ban .tile .nm", "Dehors");
+  await p.evaluate(() => ed.shadowRoot.querySelector("#p-ban .tile .dn").click()); await p.waitForTimeout(120);
+  await p.evaluate(() => ed.shadowRoot.querySelector("#p-ban #addb").click()); await p.waitForTimeout(80);
+  await p.keyboard.type("telecommande"); await p.waitForTimeout(150); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  c = await cfg(p);
+  check("tuile renommée, déplacée, puis troisième ajoutée (config gelée comme dans HA)", c.banner.length === 3 && c.banner[1].name === "Dehors" && c.banner[0].entity === "sensor.exterieur_humidity" && c.banner[2].entity === "sensor.telecommande_battery", c.banner);
+  await p.evaluate(() => ed.shadowRoot.querySelectorAll("#p-ban .tile .rm")[2].click()); await p.waitForTimeout(120);
+  c = await cfg(p); check("tuile supprimée", c.banner.length === 2, c.banner.length);
+  const je = await p.evaluate(() => window.jsErr || []); check("bandeau : aucune erreur JS", !je.length, je);
   // réglages
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=set]').click());
   await setInput(p, "#p-set #ti", "Maison test");
