@@ -6,8 +6,9 @@ import * as G from "./geometry.js";
 import { toYaml } from "./yaml.js";
 import { STUB } from "./stub.js";
 import "./editor.js";
+import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.2.0";
+export const VERSION = "1.3.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -87,7 +88,7 @@ class PlanMaisonCard extends HTMLElement {
     this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} };
     this._AX = Object.assign({}, this._defAX); this._geo();
     const r = this.attachShadow({ mode: "open" });
-    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}</style><ha-card><div class="wrap">
+    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}</style><ha-card><div class="wrap">
       <header><h1 id="title"></h1><div class="live" id="live"><i></i><span></span></div></header>
       <section class="meteo" id="meteo"></section>
       <div class="main">
@@ -95,7 +96,7 @@ class PlanMaisonCard extends HTMLElement {
           <div class="toolbar"><span class="lbl">Afficher</span><label class="chk"><input type="checkbox" id="showfurn" checked> Mobilier</label><label class="chk"><input type="checkbox" id="showdev" checked> Équipements</label>
             <span class="sp"></span><span class="tb-r"><span class="lbl">Mode</span><div class="seg" id="seg"><button data-m="view" class="on">Consulter</button><button data-m="dev">Équipements</button><button data-m="furn">Mobilier</button><button data-m="walls">Murs</button></div><button class="btn" id="export" title="Copier la configuration YAML avec la disposition actuelle">Exporter</button></span></div>
           <div class="movebar" id="t-dev" hidden><span>Glisse une pastille pour la placer, touche-la pour changer son icône ou la retirer.</span><span class="sp"></span>
-            <input class="ent" id="ent" list="ents" placeholder="Entité à ajouter, ex. light.cuisine"><datalist id="ents"></datalist><button class="btn solid" id="dev-add">Ajouter</button>
+            <span id="ent" style="flex:1;min-width:220px;max-width:340px"></span>
             <select id="restore"></select><button class="btn" id="dev-restore">Remettre</button><button class="btn" id="dev-reset">Rétablir les équipements</button></div>
           <div class="movebar" id="t-furn" hidden><span>Glisse un meuble, touche-le pour le pivoter ou le retirer (clavier : flèches, R, Suppr).</span><span class="sp"></span>
             <button class="btn solid" id="furn-lib">Ajouter un meuble…</button><button class="btn" id="furn-reset">Rétablir le mobilier</button></div>
@@ -119,7 +120,7 @@ class PlanMaisonCard extends HTMLElement {
     $("walls-reset").addEventListener("click", () => this._confirm($("walls-reset"), () => { this._L.axes = {}; this._AX = Object.assign({}, this._defAX); this._geo(); this._save(); this._build(); this._panel(); }));
     $("dev-reset").addEventListener("click", () => this._confirm($("dev-reset"), () => { this._L.pos = {}; this._L.devAdded = []; this._L.devHidden = {}; this._L.icons = {}; this._save(); this._build(); this._panel(); }));
     $("dev-restore").addEventListener("click", () => { const id = $("restore").value; if (!id) return; delete this._L.devHidden[id]; this._save(); this._build(); });
-    $("dev-add").addEventListener("click", () => this._addDev());
+    { const pk = createPicker({ hass: () => this._hass, keepText: false, domains: DEVICE_DOMAINS, placeholder: "Ajouter un appareil : tape son nom…", onPick: (e) => this._addDev(e) }); pk.style.cssText = "flex:1;min-width:220px;max-width:340px"; $("ent").replaceWith(pk); }
     this._kd = (e) => this._keydown(e); document.addEventListener("keydown", this._kd);
   }
   _head() {
@@ -284,16 +285,13 @@ class PlanMaisonCard extends HTMLElement {
     this._mode = m; this._sel = null; this._pop.hidden = true;
     this.$("seg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
     ["dev", "furn", "walls"].forEach((k) => (this.$("t-" + k).hidden = m !== k));
-    if (m === "dev") this.$("ents").innerHTML = Object.keys(this._hass.states).filter((e) => /^(light|switch|sensor|binary_sensor|climate|camera|media_player|input_boolean|fan|cover|lock|valve|device_tracker|vacuum|alarm_control_panel)\./.test(e)).sort().map((e) => `<option value="${e}">`).join("");
     if (m === "dev") this.$("showdev").checked = true;
     if (m === "furn") this.$("showfurn").checked = true;
     this._build(); this._panel();
   }
   _center() { if (this._focus && this._LB[this._focus]) return this._LB[this._focus].slice(); const v = this._view; return [v[0] + v[2] / 2, v[1] + v[3] / 2]; }
-  _addDev() {
-    const $ = this.$, e = $("ent").value.trim(), st = this._hass.states[e];
-    if (!st) { $("ent").style.borderColor = "var(--na)"; return; }
-    $("ent").style.borderColor = ""; $("ent").value = "";
+  _addDev(e) {
+    const st = this._hass.states[e]; if (!st) return;
     const c = this._center(), nid = "u" + Date.now().toString(36);
     this._L.devAdded.push({ id: nid, entity: e, pos: [Math.round(c[0] + 6), Math.round(c[1] + 5)], ik: guess(st, e) });
     this._save(); this._sel = { k: "d", id: nid }; this._build();
@@ -587,7 +585,7 @@ class PlanMaisonCard extends HTMLElement {
     if (cfg.auto !== false) {
       this._devs().filter((d) => d.pos && !ruled.has(d.entity)).forEach((d) => {
         const st = S[d.entity];
-        if (!st || NA.includes(st.state)) out.push(["na", this._nm(d) + " indisponible", d.entity + " ne répond pas."]);
+        if (!st || NA.includes(st.state)) out.push(["na", this._nm(d) + " indisponible", "Ne répond plus."]);
         else if (d.entity.startsWith("binary_sensor.") && st.state === "on" && ["door", "window", "opening", "garage_door"].includes(st.attributes.device_class)) out.push(["warn", this._nm(d) + " ouverte", "Depuis " + new Date(st.last_changed).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "."]);
         else if (this._stateOf(d).c === "warn" && !(d.warn && d.warn.entity && ruled.has(d.warn.entity))) out.push(["warn", this._nm(d), this._stateOf(d).t]);
       });
@@ -607,7 +605,7 @@ class PlanMaisonCard extends HTMLElement {
     if (!list.length) return '<p class="muted">Aucun équipement placé ici.</p>';
     return '<ul class="devs">' + list.map((d) => {
       const s = this._stateOf(d), dom = d.entity.split(".")[0], tg = d.kind === "t" && TOGGLE.includes(dom) && s.c !== "na";
-      return `<li class="dev" data-id="${esc(d.id)}"><span class="n">${esc(this._nm(d))}</span><span class="ctl"><span class="chip ${s.c}">${esc(s.t)}</span>${tg ? `<button class="tgl ${s.c === "on" ? "on" : ""}" data-t="${esc(d.id)}" aria-label="Basculer"></button>` : ""}</span><span class="d">${esc(d.entity)}</span></li>`;
+      return `<li class="dev" data-id="${esc(d.id)}"><span class="n">${esc(this._nm(d))}</span><span class="ctl"><span class="chip ${s.c}">${esc(s.t)}</span>${tg ? `<button class="tgl ${s.c === "on" ? "on" : ""}" data-t="${esc(d.id)}" aria-label="Basculer"></button>` : ""}</span><span class="d" title="${esc(d.entity)}">${esc(describe(this._hass, d.entity))}</span></li>`;
     }).join("") + "</ul>";
   }
   _wire(p) {
@@ -665,7 +663,7 @@ class PlanMaisonCard extends HTMLElement {
   _devPop(d) {
     const pop = this._pop, pick = d.kind !== "w" && d.kind !== "l", ov = !!this._L.icons[d.id];
     pop.classList.remove("xl"); pop.classList.toggle("wide", pick);
-    pop.innerHTML = `<div><div class="t">${esc(this._nm(d))}</div><div class="s">${esc(d.entity)}</div></div>` +
+    pop.innerHTML = `<div><div class="t">${esc(this._nm(d))}</div><div class="s" title="${esc(d.entity)}">${esc(describe(this._hass, d.entity))}</div></div>` +
       (pick ? `<div class="s">Icône animée${ov ? "" : " (choisie automatiquement)"} : touche pour changer</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" class="${d.ik === k && !d.mdi ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>` : "") +
       `<div class="row"><button class="btn" id="pm-more">Fiche</button>${ov ? '<button class="btn" id="pm-auto">Icône auto</button>' : ""}<button class="btn danger" id="pm-del">Retirer du plan</button><button class="btn" id="pm-x">Fermer</button></div>`;
     const reopen = () => { this._save(); this._sel = { k: "d", id: d.id }; this._build(); const nd = this._devs().find((x) => x.id === d.id); if (nd && this._mk[d.id]) this._devPop(nd); };

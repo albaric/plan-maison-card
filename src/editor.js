@@ -4,6 +4,7 @@ import { ICONS, guess } from "./icons.js";
 import { CAT, FSTYLE } from "./furniture.js";
 import { BASE_CSS, ICON_CSS } from "./styles.js";
 import * as G from "./geometry.js";
+import { createPicker, PICKER_CSS, DEVICE_DOMAINS } from "./picker.js";
 
 const M = 10;
 const NS = "http://www.w3.org/2000/svg";
@@ -76,6 +77,7 @@ const CSS = `
 .row-b{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto}
 .mini{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:3px 7px;border-radius:5px;cursor:pointer}
 .mini.danger{color:var(--na)}
+.add .epk{flex:1;min-width:200px}
 .add{display:flex;gap:6px;flex-wrap:wrap}.add input{flex:1;min-width:180px;font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--paper);color:var(--ink)}
 .muted{color:var(--ink-2);font-size:12.5px;margin:0}
 svg .grid{fill:url(#eg)}svg .g1{stroke:var(--line);stroke-width:.25}svg .g5{stroke:var(--ink-2);stroke-width:.3;opacity:.5}
@@ -191,7 +193,7 @@ class PlanMaisonCardEditor extends HTMLElement {
   /* ---------- squelette ---------- */
   _setup() {
     const r = this.attachShadow({ mode: "open" });
-    r.innerHTML = `<style>${BASE_CSS}${ICON_CSS}${CSS}</style><div class="ed">
+    r.innerHTML = `<style>${BASE_CSS}${ICON_CSS}${CSS}${PICKER_CSS}</style><div class="ed">
       <div class="tabs" id="tabs"><button data-t="plan">Plan</button><button data-t="dev">Équipements</button><button data-t="ban">Bandeau</button><button data-t="set">Réglages</button></div>
       <div id="note" class="note" hidden></div>
       <section id="p-plan">
@@ -205,7 +207,6 @@ class PlanMaisonCardEditor extends HTMLElement {
       <section id="p-dev" hidden></section>
       <section id="p-ban" hidden></section>
       <section id="p-set" hidden></section>
-      <datalist id="ents"></datalist>
     </div>`;
     const $ = (id) => r.getElementById(id); this.$ = $; this._svg = $("svg");
     $("tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) { this._tab = b.dataset.t; this._render(); } };
@@ -240,7 +241,6 @@ class PlanMaisonCardEditor extends HTMLElement {
     const $ = this.$;
     $("tabs").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.t === this._tab));
     ["plan", "dev", "ban", "set"].forEach((t) => ($("p-" + t).hidden = t !== this._tab));
-    if (this._hass) $("ents").innerHTML = Object.keys(this._hass.states).sort().map((e) => `<option value="${e}">`).join("");
     this._noteRender();
     if (this._tab === "plan") {
       $("tools").querySelectorAll("[data-tool]").forEach((b) => b.classList.toggle("on", b.dataset.tool === this._tool));
@@ -683,17 +683,26 @@ class PlanMaisonCardEditor extends HTMLElement {
   _devProps(box, d, i) {
     if (!d) return;
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`, ik = this._devIcon(d);
-    box.innerHTML = `<h4>Équipement</h4><div class="f2">${field("Entité", `<input id="en" list="ents" value="${esc(d.entity)}">`)}${field("Nom affiché", `<input id="nm" value="${esc(d.raw.name || "")}" placeholder="${esc(this._devName(d))}">`)}${field("Au clic", `<select id="kd">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select>`)}</div>
+    box.innerHTML = `<h4>Équipement</h4><div class="f2"><div class="fld">Appareil<span id="en"></span></div>${field("Nom affiché", `<input id="nm" value="${esc(d.raw.name || "")}" placeholder="${esc(this._devName(d))}">`)}${field("Au clic", `<select id="kd">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select>`)}</div>
       <div class="s">Icône animée${d.raw.icon ? "" : " (choisie automatiquement)"} :</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" class="${ik === k ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>
       <div class="btns">${d.raw.icon ? '<button class="btn" id="auto">Icône automatique</button>' : ""}<button class="btn" id="unplace">Retirer du plan</button><button class="btn danger" id="del">Supprimer l'équipement</button></div>`;
     const S = this._S;
-    box.querySelector("#en").onchange = (e) => { const v = e.target.value.trim(); if (!v) return; this._change(() => { if (d.id === d.entity) d.id = v; d.entity = v; }); };
+    this._picker(box.querySelector("#en"), d.entity, (v) => this._setEntity(d, v), { domains: DEVICE_DOMAINS });
     box.querySelector("#nm").onchange = (e) => this._change(() => (d.raw.name = e.target.value.trim() || undefined));
     box.querySelector("#kd").onchange = (e) => this._change(() => (d.raw.kind = e.target.value || undefined));
     box.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._change(() => (d.raw.icon = b.dataset.k))));
     const au = box.querySelector("#auto"); if (au) au.onclick = () => this._change(() => delete d.raw.icon);
     box.querySelector("#unplace").onclick = () => this._change(() => { d.pos = null; this._sel = null; });
     box.querySelector("#del").onclick = (e) => this._confirm(e.currentTarget, () => this._change(() => { S.devices.splice(i, 1); this._sel = null; }));
+  }
+  _picker(slot, value, onPick, o = {}) {
+    const pk = createPicker({ hass: () => this._hass, value, placeholder: o.placeholder, domains: o.domains, keepText: o.keepText, onPick });
+    slot.replaceWith(pk); return pk;
+  }
+  _setEntity(d, v) { this._change(() => { if (d.id === d.entity) d.id = v; d.entity = v; }); }
+  _addDevice(v) {
+    const S = this._S, c = this._center();
+    this._change(() => { let id = v; while (S.devices.some((d) => d.id === id)) id += "_2"; S.devices.push({ id, entity: v, pos: [Math.round(c[0]), Math.round(c[1])], raw: id !== v ? { id } : {} }); });
   }
   _center() {
     const s = this._sel, S = this._S;
@@ -709,15 +718,13 @@ class PlanMaisonCardEditor extends HTMLElement {
   /* ---------- onglet Équipements ---------- */
   _devTab() {
     const box = this.$("p-dev"), S = this._S;
-    box.innerHTML = `<p class="muted">Ajoute les entités à montrer sur le plan. Une fois ajoutées, place-les dans l'onglet Plan (bouton « Placer » puis glisse la pastille). L'icône animée est devinée d'après l'entité ; touche une pastille du plan pour la changer.</p>
-      <div class="add"><input id="new" list="ents" placeholder="Entité, ex. light.salon"><button class="btn solid" id="addd">Ajouter</button></div>
-      <div class="list">${S.devices.map((d, i) => `<div class="row-e" data-i="${i}"><span class="ic">${(ICONS[this._devIcon(d)] || ICONS.generic)[1]}</span><input class="en" list="ents" value="${esc(d.entity)}" title="Entité"><input class="nm" value="${esc(d.raw.name || "")}" placeholder="${esc(this._devName(d))}" title="Nom affiché"><select class="kd" title="Au clic">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select><span class="btns"><button class="mini pl">${d.pos ? "Voir" : "Placer"}</button><button class="mini danger rm" title="Supprimer">✕</button></span></div>`).join("") || '<p class="muted">Aucun équipement pour l\'instant.</p>'}</div>`;
-    const add = () => { const v = box.querySelector("#new").value.trim(); if (!v) return; if (this._hass && !this._hass.states[v]) { box.querySelector("#new").style.borderColor = "var(--na)"; return; } const c = this._center(); this._change(() => { let id = v; while (S.devices.some((d) => d.id === id)) id += "_2"; S.devices.push({ id, entity: v, pos: [Math.round(c[0]), Math.round(c[1])], raw: id !== v ? { id } : {} }); }); };
-    box.querySelector("#addd").onclick = add;
-    box.querySelector("#new").onkeydown = (e) => { if (e.key === "Enter") add(); };
+    box.innerHTML = `<p class="muted">Tape le nom d'un appareil (« lampe salon », « porte entrée »…) et choisis-le dans la liste : il est ajouté au centre du plan. Glisse-le ensuite à sa place dans l'onglet Plan. L'icône animée est choisie d'après l'appareil ; touche sa pastille sur le plan pour la changer.</p>
+      <div class="add"><span id="new"></span></div>
+      <div class="list">${S.devices.map((d, i) => `<div class="row-e" data-i="${i}"><span class="ic">${(ICONS[this._devIcon(d)] || ICONS.generic)[1]}</span><span class="en"></span><input class="nm" value="${esc(d.raw.name || "")}" placeholder="Nom affiché (facultatif)" title="Nom affiché sur la carte, si différent du nom Home Assistant"><select class="kd" title="Au clic">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select><span class="btns"><button class="mini pl">${d.pos ? "Voir" : "Placer"}</button><button class="mini danger rm" title="Supprimer">✕</button></span></div>`).join("") || '<p class="muted">Aucun équipement pour l\'instant.</p>'}</div>`;
+    this._picker(box.querySelector("#new"), "", (v) => this._addDevice(v), { domains: DEVICE_DOMAINS, keepText: false, placeholder: "Ajouter un appareil : tape son nom…" });
     box.querySelectorAll(".row-e").forEach((row) => {
       const d = S.devices[+row.dataset.i];
-      row.querySelector(".en").onchange = (e) => { const v = e.target.value.trim(); if (v) this._change(() => { if (d.id === d.entity) d.id = v; d.entity = v; }); };
+      this._picker(row.querySelector(".en"), d.entity, (v) => this._setEntity(d, v), { domains: DEVICE_DOMAINS });
       row.querySelector(".nm").onchange = (e) => this._change(() => (d.raw.name = e.target.value.trim() || undefined));
       row.querySelector(".kd").onchange = (e) => this._change(() => (d.raw.kind = e.target.value || undefined));
       row.querySelector(".pl").onclick = () => { if (!d.pos) { const c = this._center(); this._change(() => (d.pos = [Math.round(c[0]), Math.round(c[1])]), { noUndo: false }); } this._tab = "plan"; this._tool = "select"; this._sel = { k: "dev", i: +row.dataset.i }; this._render(); };
@@ -729,15 +736,20 @@ class PlanMaisonCardEditor extends HTMLElement {
   _banTab() {
     const box = this.$("p-ban"), list = this._cfg.banner || [];
     box.innerHTML = `<p class="muted">Tuiles affichées sous le titre (météo ou n'importe quel capteur). Laisse vide pour masquer le bandeau.</p>
-      <div class="add"><input id="new" list="ents" placeholder="Entité, ex. sensor.temperature_exterieure"><button class="btn solid" id="addb">Ajouter</button></div>
-      <div class="list">${list.map((t, i) => `<div class="row-e row-b" data-i="${i}"><input class="en" list="ents" value="${esc(t.entity)}" title="Entité"><input class="nm" value="${esc(t.name || "")}" placeholder="Nom" title="Nom"><input class="sc" value="${esc(t.secondary || "")}" placeholder="Ligne secondaire" title="Ligne secondaire, ex. ressenti {sensor.ressenti:1} °C"><span class="btns"><button class="mini up" title="Monter">↑</button><button class="mini danger rm" title="Supprimer">✕</button></span></div>`).join("") || '<p class="muted">Bandeau vide.</p>'}</div>
-      <p class="muted">Dans la ligne secondaire, <code>{sensor.xxx}</code> affiche la valeur d'une autre entité, <code>{sensor.xxx:1}</code> avec une décimale.</p>`;
+      <div class="add"><span id="new"></span></div>
+      <div class="list">${list.map((t, i) => `<div class="row-e row-b" data-i="${i}"><span class="en"></span><input class="nm" value="${esc(t.name || "")}" placeholder="Titre (facultatif)" title="Titre de la tuile"><input class="sc" value="${esc(t.secondary || "")}" placeholder="Ligne secondaire" title="Ligne secondaire, ex. ressenti {sensor.ressenti:1} °C"><span class="btns"><button class="mini up" title="Monter">↑</button><button class="mini danger rm" title="Supprimer">✕</button></span></div>`).join("") || '<p class="muted">Bandeau vide.</p>'}</div>
+      <p class="muted">Ligne secondaire : texte libre affiché sous la valeur. Pour y insérer la valeur d'un autre capteur, choisis-le ici :</p><div class="add"><span id="ins"></span></div>`;
     const upd = (fn) => this._change(() => { const b = clone(this._cfg.banner || []); fn(b); if (b.length) this._cfg.banner = b; else delete this._cfg.banner; });
-    const add = () => { const v = box.querySelector("#new").value.trim(); if (v) upd((b) => b.push({ entity: v })); };
-    box.querySelector("#addb").onclick = add; box.querySelector("#new").onkeydown = (e) => { if (e.key === "Enter") add(); };
+    this._picker(box.querySelector("#new"), "", (v) => upd((b) => b.push({ entity: v })), { keepText: false, placeholder: "Ajouter une tuile : tape le nom d'un capteur…" });
+    const lastSc = { el: null }; box.querySelectorAll(".sc").forEach((x) => x.addEventListener("focus", () => (lastSc.el = x)));
+    if (list.length) this._picker(box.querySelector("#ins"), "", (v) => {
+      const el = lastSc.el || box.querySelectorAll(".sc")[list.length - 1], i = +el.closest(".row-e").dataset.i;
+      upd((b) => { b[i].secondary = ((b[i].secondary || "") + " {" + v + "}").trim(); });
+    }, { keepText: false, placeholder: "Insérer la valeur d'un capteur dans la ligne secondaire…" });
+    else box.querySelector("#ins").parentElement.remove();
     box.querySelectorAll(".row-e").forEach((row) => {
       const i = +row.dataset.i;
-      row.querySelector(".en").onchange = (e) => upd((b) => (b[i].entity = e.target.value.trim()));
+      this._picker(row.querySelector(".en"), list[i].entity, (v) => upd((b) => (b[i].entity = v)));
       row.querySelector(".nm").onchange = (e) => upd((b) => { b[i].name = e.target.value.trim(); clean(b[i]); });
       row.querySelector(".sc").onchange = (e) => upd((b) => { b[i].secondary = e.target.value.trim(); clean(b[i]); });
       row.querySelector(".up").onclick = () => i && upd((b) => b.splice(i - 1, 0, b.splice(i, 1)[0]));

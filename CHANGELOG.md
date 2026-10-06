@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.3.0
+
+- Les appareils se choisissent par leur nom courant : on tape « lampe salon » et on choisit dans la liste (nom, type d'appareil et pièce Home Assistant). Les identifiants techniques (`light.xxx`) n'apparaissent plus, ni dans l'éditeur (Équipements, Bandeau, panneau d'un équipement) ni dans la carte (ajout en mode Équipements, listes du panneau latéral).
+- Bandeau : un sélecteur insère la valeur d'un autre capteur dans la ligne secondaire.
+
 ## 1.2.0
 
 - Pièces de forme libre : outil « Forme libre » pour dessiner une pièce coin par coin, avec alignement automatique à l'horizontale et à la verticale.

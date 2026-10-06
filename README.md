@@ -50,7 +50,7 @@ HACS déclare la ressource `/hacsfiles/plan-maison-card/plan-maison-card.js` tou
    - outil **Extérieur** : terrasse, pergola, abri, piscine, potager, allée ;
    - outil **Sélection** : glisse une pièce, un coin (rond) ou un mur. Déplacer un mur commun déplace les deux pièces et ses portes. Pour changer la forme d'une pièce, touche le **« + »** au milieu d'un de ses murs et tire le nouveau coin ; touche un coin pour saisir sa position au centimètre ou le supprimer. Molette pour zoomer, glisser le fond pour déplacer la vue, Ctrl+Z pour annuler ;
    - **Ajouter un meuble…** ouvre la bibliothèque ; un meuble se glisse, R le pivote, Suppr l'enlève.
-4. Onglet **Équipements** : ajoute tes entités, puis **Placer** et glisse la pastille sur le plan. Touche-la pour choisir son icône animée.
+4. Onglet **Équipements** : tape le nom d'un appareil (« lampe salon », « porte entrée »…) et choisis-le dans la liste, sans avoir à connaître son identifiant technique. Il apparaît au centre du plan : glisse la pastille à sa place et touche-la pour choisir son icône animée.
 5. Onglets **Bandeau** (tuiles météo ou capteurs) et **Réglages** (titre, thème, jardin, alertes).
 6. **Enregistrer**.
 

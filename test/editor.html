@@ -27,7 +27,7 @@ const states = Object.fromEntries([
  S('sensor.anemometre_rafale','7.9',{unit_of_measurement:'km/h'}), S('sensor.vigilance_meteo','Vert'), S('sensor.pluviometre_intensite', location.search.includes('storm')?'1.2':'0',{unit_of_measurement:'mm/h'}), S('sensor.probabilite_pluie','30',{unit_of_measurement:'%'}), S('sensor.indice_uv','2'),
  S('sensor.coordinateur_zigbee_connexion','wifi'), S('update.serveur_fichiers','on'), S('sensor.vanne_arrosage_batterie','57',{unit_of_measurement:'%'}), S('media_player.tv_chambre','unavailable'), S('light.ampoule_couleur','off')
 ,
- S('light.salon','on'), S('switch.prise_cuisine','off'), S('light.guirlande_terrasse','on'), S('sensor.exterieur_temperature','24.5',{unit_of_measurement:'°C',device_class:'temperature'}), S('sensor.exterieur_humidity','58',{unit_of_measurement:'%',device_class:'humidity'}), S('binary_sensor.porte_entree','off',{device_class:'door'}),
+ S('light.salon','on',{friendly_name:'Lumière du salon'}), S('switch.prise_cuisine','off'), S('light.guirlande_terrasse','on'), S('sensor.exterieur_temperature','24.5',{unit_of_measurement:'°C',device_class:'temperature'}), S('sensor.exterieur_humidity','58',{unit_of_measurement:'%',device_class:'humidity'}), S('binary_sensor.porte_entree','off',{device_class:'door'}),
  S('sensor.telecommande_battery','12',{unit_of_measurement:'%',device_class:'battery',friendly_name:'Télécommande'}), S('update.home_assistant_core_update','on',{title:'Home Assistant Core',latest_version:'2026.10.1'})
 ]);
 window.calls=[]; window.store = window.store || {};

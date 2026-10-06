@@ -79,8 +79,13 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   await tool(p, "select");
   // équipements
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=dev]').click());
-  await p.evaluate(() => { const i = ed.shadowRoot.querySelector("#p-dev #new"); i.value = "light.salon"; ed.shadowRoot.querySelector("#addd").click(); });
-  await p.waitForTimeout(100);
+  await p.evaluate(() => ed.shadowRoot.querySelector("#p-dev .add .epk input").focus());
+  await p.keyboard.type("lumiere sal"); await p.waitForTimeout(150);
+  const first = await p.evaluate(() => { const li = ed.shadowRoot.querySelector("#p-dev .add .epk li b"); return li && li.textContent; });
+  check("recherche par nom courant", first === "Lumière du salon", first);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  const shown = await p.evaluate(() => ed.shadowRoot.querySelector("#p-dev .list .epk input").value);
+  check("liste : nom courant affiché, pas l'identifiant", shown === "Lumière du salon", shown);
   c = await cfg(p); check("équipement ajouté avec position", c.devices && c.devices[0].entity === "light.salon" && c.devices[0].x != null, c.devices);
   await p.evaluate(() => ed.shadowRoot.querySelector("#p-dev .pl").click()); await p.waitForTimeout(150);
   await p.evaluate(() => ed.shadowRoot.querySelector('#props .ipk button[data-k="lamp"]').click()); await p.waitForTimeout(100);
@@ -93,8 +98,8 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   c = await cfg(p); check("meuble pivoté (R)", c.furniture[0].rot === 90, c.furniture[0]);
   // bandeau
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=ban]').click());
-  await p.evaluate(() => { ed.shadowRoot.querySelector("#p-ban #new").value = "sensor.exterieur_temperature"; ed.shadowRoot.querySelector("#addb").click(); });
-  await p.waitForTimeout(100);
+  await p.evaluate(() => ed.shadowRoot.querySelector("#p-ban .add .epk input").focus());
+  await p.keyboard.type("exterieur temp"); await p.waitForTimeout(150); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
   c = await cfg(p); check("tuile de bandeau", c.banner && c.banner[0].entity === "sensor.exterieur_temperature", c.banner);
   // réglages
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=set]').click());
