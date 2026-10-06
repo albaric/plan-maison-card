@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 1.7.0
+
+- Mobilier entièrement redessiné : un dessin propre à chaque meuble, avec ses détails et des couleurs vives (vaisselle sur la table, livres sur l'étagère, ordinateur sur le bureau, couette et plaid sur le lit, serviettes et canard dans le bain…).
+- 73 meubles rangés par pièce dans la bibliothèque (salon, repas, chambre, bureau, cuisine, salle de bain, jardin). Nouveautés : cuisine équipée, plan de travail, cuisine d'angle, îlot avec tabourets, bar, évier double, plaque de cuisson, frigo américain, lave-vaisselle ; meuble double vasque, sèche-serviettes, tapis de bain ; poêle, cheminée, table basse ronde, table et chaises ; chevet, fauteuil de bureau ; piscine, spa, pergola en glycine, potager, massif fleuri, lavandes, haie, olivier, palmier, arbre fruitier, pot de fleurs, salon et table de jardin, brasero, hamac, trampoline, robot tondeuse.
+- Meubles redimensionnables dans l'éditeur (largeur et profondeur) : plans de travail, piscine, potager, haie, tapis, lits… Les tissus changent de couleur (14 teintes), dans l'éditeur comme sur la carte.
+- Éditeur : un bouton « Illustrer » remplace les meubles dessinés avec de simples formes par les illustrations du catalogue, à la même place et à la même taille (lits et canapés orientés d'après leurs oreillers ou leur dossier, évier et plaques posés sur les plans de travail, tabourets séparés).
+- Les espaces extérieurs « piscine » et « massif, potager » sont dessinés (eau, bouée, fleurs, rangs de légumes).
+
 ## 1.6.0
 
 - Nouveau widget humidité : une goutte qui se remplit selon le taux d'humidité, avec une vague animée, une couleur qui va de l'orange (air sec) au bleu profond (air humide) et des bulles au-delà de 65 %. Il s'applique automatiquement aux capteurs d'humidité.

@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Planche du mobilier</title>
 <style>body{margin:0;font-family:sans-serif;background:#e9ecef}</style></head><body><div id="host"></div>
 <script type="module">
-import { CAT, FSTYLE } from "../src/furniture.js";
+import { CAT, FSTYLE, META, CATS } from "../src/furniture.js";
 import { furnSvg, FURN_DEFS } from "../src/furnart.js";
 import { BASE_CSS, ICON_CSS } from "../src/styles.js";
 const host = document.getElementById("host"), root = host.attachShadow({ mode: "open" });
@@ -15,6 +15,6 @@ root.innerHTML = `<style>${BASE_CSS}${ICON_CSS}
 .c{background:var(--t-jour);border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;font:12px sans-serif;color:var(--ink)}
 .c svg{width:150px;height:120px}
 </style><svg width="0" height="0" style="position:absolute"><defs><filter id="pmfs" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx=".25" dy=".35" stdDeviation=".35" flood-opacity=".25"/></filter>${FURN_DEFS}</defs></svg>
-<div class="g">${Object.entries(CAT).map(([k, v]) => { const b = bb(v[1]), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood";
-  return `<div class="c"><svg viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="piece fs-${st}">${furnSvg(v[1], st)}</g></svg><b>${v[0]}</b><span style="color:var(--ink-2)">${k} · ${st}</span></div>`; }).join("")}</div>`;
+${CATS.map(([cat, lab]) => `<h2 style="font:600 15px sans-serif;color:var(--ink);margin:14px 0 6px">${lab}</h2><div class="g">${Object.keys(META).filter((k) => META[k][1] === cat).map((k) => { const v = CAT[k], b = bb(v[1]), m = Math.max(b.w, b.h) * 0.08 + 0.8, st = FSTYLE[k] || "wood";
+  return `<div class="c"><svg viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="piece fs-${st}">${furnSvg(v[1], st, k)}</g></svg><b>${v[0]}</b><span style="color:var(--ink-2)">${k}</span></div>`; }).join("")}</div>`).join("")}`;
 </script></body></html>

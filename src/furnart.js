@@ -1,3 +1,5 @@
+import { DRAW } from "./furndraw.js";
+import { META, CATS, CAT, FSTYLE, COLORS, COLOR_NAMES, furnColor, furnParts } from "./furniture.js";
 // Mobilier illustré, vu de dessus. Chaque meuble garde ses formes (rect, cercle, ellipse, trait, en décimètres)
 // et reçoit un habillage selon son style : bois veiné, tissu et coussins, couette, feuillage, céramique, eau…
 
@@ -252,8 +254,13 @@ const ART = {
   },
 };
 
-/** Rendu SVG d'un meuble (à placer dans un groupe déjà translaté et tourné). */
-export function furnSvg(parts, st) {
+/** Rendu SVG d'un meuble (à placer dans un groupe déjà translaté et tourné).
+ *  Meuble du catalogue : dessin dédié à sa taille ; meuble décrit par ses formes : rendu par style. */
+export function furnSvg(parts, st, type, color) {
+  if (type && DRAW[type] && META[type]) {
+    const b = parts && parts.length ? box(parts[0]) : { w: META[type][2], h: META[type][3] };
+    try { return `<g class="fa fa-${type}">${DRAW[type](b.w, b.h, furnColor(type, color))}</g>`; } catch (e) { /* repli ci-dessous */ }
+  }
   const f = ART[st] || ART.wood;
   try { return `<g class="fa">${f(parts)}</g>`; } catch (e) { return `<g class="fa">${ART.wood(parts)}</g>`; }
 }
@@ -271,6 +278,7 @@ export const FURN_DEFS = `
 <linearGradient id="pfMet" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:#eef2f5"/><stop offset=".45" style="stop-color:var(--met)"/><stop offset=".7" style="stop-color:#b5bec6"/><stop offset="1" style="stop-color:var(--met)"/></linearGradient>
 <linearGradient id="pfApp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:#fff"/><stop offset="1" style="stop-color:var(--app)"/></linearGradient>
 <radialGradient id="pfGlass" cx=".35" cy=".3" r=".9"><stop offset="0" style="stop-color:#6b7d90"/><stop offset="1" style="stop-color:#1c2530"/></radialGradient>
+<linearGradient id="pfPool" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fe0f5"/><stop offset=".55" stop-color="#3fb0e6"/><stop offset="1" stop-color="#1f7fc8"/></linearGradient>
 <radialGradient id="pfGlow"><stop offset="0" stop-color="#ffe9a8" stop-opacity=".75"/><stop offset="1" stop-color="#ffe9a8" stop-opacity="0"/></radialGradient>
 <radialGradient id="pfShade" cx=".45" cy=".4"><stop offset="0" stop-color="#fffbe6"/><stop offset="1" stop-color="#ffd36b"/></radialGradient>
 <radialGradient id="pfFire"><stop offset="0" stop-color="#fff3b0"/><stop offset=".5" stop-color="#ff8a1a"/><stop offset="1" stop-color="#c2410c"/></radialGradient>
@@ -288,9 +296,18 @@ export const FURN_DEFS = `
 `;
 
 export const FURN_CSS = `
+.flcat{font-family:var(--f-display);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin:6px 0 -2px}.fsw{display:flex;flex-wrap:wrap;gap:6px}.fsw button{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}.fsw button.cur{box-shadow:0 0 0 2px var(--sel)}
 :host{--duv:#dce7f7}:host(.dark){--duv:#4b5a70}
 .fa .fp,.fa .fpl{transition:stroke .2s}
 .piece.sel .fp,.piece.sel .fpl{stroke:var(--sel)!important;stroke-width:.7!important}
+.piece.sel .hitr{stroke:var(--sel);stroke-width:.45;stroke-dasharray:1.2 .8;fill:color-mix(in srgb,var(--sel) 8%,transparent)}
+:host(.dark) .fa{filter:brightness(.86) saturate(.92)}
+.fa .bob{animation:pmbob 3.4s ease-in-out infinite}
+.fa .cau{animation:pmcau 5s ease-in-out infinite alternate}
+.fa .spinw{transform-box:fill-box;transform-origin:center;animation:pmspinw 3s linear infinite}
+@keyframes pmbob{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(.25px,.35px) rotate(4deg)}}
+@keyframes pmcau{from{transform:translate(0,0);opacity:.55}to{transform:translate(1.2px,.6px);opacity:1}}
+@keyframes pmspinw{to{transform:rotate(360deg)}}
 .m-furn .piece:hover .fp{stroke:var(--sel)}
 .fa .lfg{transform-box:fill-box;transform-origin:center;animation:pmleaf 7s ease-in-out infinite}
 .fa .rip{animation:pmrip 3.2s ease-in-out infinite}
@@ -302,3 +319,26 @@ export const FURN_CSS = `
 @keyframes pmglowl{0%,100%{opacity:.9}50%{opacity:.6}}
 @media (prefers-reduced-motion:reduce){.fa *{animation:none!important}}
 `;
+
+const escH = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+/** Vignette d'un meuble du catalogue. */
+export function furnThumb(k) {
+  const parts = furnParts(k), b = box(parts[0]), m = Math.max(b.w, b.h) * 0.08 + 0.5;
+  return `<svg class="fth" viewBox="${n2(b.x - m)} ${n2(b.y - m)} ${n2(b.w + 2 * m)} ${n2(b.h + 2 * m)}"><g class="fs-${FSTYLE[k] || "wood"}">${furnSvg(parts, FSTYLE[k] || "wood", k)}</g></svg>`;
+}
+/** Bibliothèque rangée par catégories (boutons data-k). */
+export function furnLibHtml() {
+  return CATS.map(([cat, lab]) => `<div class="flcat">${lab}</div><div class="ipk flib">${Object.keys(META).filter((k) => META[k][1] === cat).map((k) => `<button data-k="${k}" title="${escH(META[k][0])}">${furnThumb(k)}<span>${escH(META[k][0])}</span></button>`).join("")}</div>`).join("");
+}
+/** Pastilles de couleur (data-c) ; « cur » = couleur actuelle. */
+export function furnSwatches(type, cur) {
+  const def = META[type] && META[type][5];
+  return `<div class="fsw">${Object.keys(COLORS).map((c) => `<button data-c="${c}" title="${COLOR_NAMES[c]}" class="${(cur || def) === c ? "cur" : ""}" style="background:${COLORS[c]}"></button>`).join("")}</div>`;
+}
+
+/** Décor d'un espace extérieur (piscine, massif, potager) dessiné sur son rectangle. */
+export function zoneArt(z, x, y, w, h) {
+  const k = z.type === "pool" ? "piscine" : z.type === "patch" ? (/potager|legume/i.test(String(z.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")) ? "potager" : "massif") : null;
+  if (!k || w < 2 || h < 2) return "";
+  try { return `<g class="zart fa" transform="translate(${n2(x)} ${n2(y)})">${DRAW[k](w, h, furnColor(k))}</g>`; } catch (e) { return ""; }
+}

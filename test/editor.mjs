@@ -110,6 +110,12 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   c = await cfg(p); check("meuble ajouté", c.furniture && c.furniture[0].type === "canape", c.furniture);
   await p.keyboard.press("r"); await p.waitForTimeout(100);
   c = await cfg(p); check("meuble pivoté (R)", c.furniture[0].rot === 90, c.furniture[0]);
+  await setInput(p, "#props #fw", "2.4"); await p.waitForTimeout(100);
+  c = await cfg(p); check("meuble redimensionné", c.furniture[0].w === 2.4 && c.furniture[0].h === 0.7, c.furniture[0]);
+  await p.evaluate(() => ed.shadowRoot.querySelector('#props .fsw button[data-c="moutarde"]').click()); await p.waitForTimeout(100);
+  c = await cfg(p); check("couleur du meuble", c.furniture[0].color === "moutarde", c.furniture[0]);
+  const drawn = await p.evaluate(() => !!card.shadowRoot.querySelector(".piece .fa-canape"));
+  check("canapé illustré sur la carte", drawn);
   // bandeau
   await p.evaluate(() => ed.shadowRoot.querySelector('[data-t=ban]').click());
   for (const q of ["exterieur temp", "exterieur hum"]) {
@@ -174,6 +180,24 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
     check("disposition personnelle vidée", st && !Object.keys(st).length, st);
   }
   check("sombre : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
+{ // meubles dessinés à la main → illustrations du catalogue
+  const { p, errs } = await open("cfg=simple");
+  await p.evaluate(() => { const c = JSON.parse(JSON.stringify(window.cfg || {})); });
+  await p.evaluate(() => { ed.setConfig(Object.assign({}, ed._cfg, { furniture: [
+    { id: "lit", name: "Lit double", x: 1, y: 1, style: "bed", parts: [[ "r", 0, 0, 1.8, 2.1, 0.06 ], [ "r", 0.1, 1.55, 0.75, 0.45, 0.06 ], [ "r", 0.95, 1.55, 0.75, 0.45, 0.06 ]] },
+    { id: "plan", name: "Plan de travail et évier", x: 5, y: 1, style: "counter", parts: [[ "r", 0, 0, 3.3, 0.55, 0.02 ]] },
+    { id: "tab", name: "Tabourets", x: 5, y: 2, style: "stool", parts: [[ "c", 0.14, 0.14, 0.14 ], [ "c", 0.14, 0.64, 0.14 ]] }] })); });
+  await p.waitForTimeout(200);
+  const has = await p.evaluate(() => !!ed.shadowRoot.querySelector("#props #modall"));
+  check("proposition d'illustrer les meubles", has);
+  await p.evaluate(() => ed.shadowRoot.querySelector("#props #modall").click()); await p.waitForTimeout(150);
+  const c = await cfg(p), f = c.furniture || [];
+  const bed = f.find((x) => x.id === "lit"), sink = f.find((x) => x.type === "evier"), st = f.filter((x) => x.type === "tabouret");
+  check("meubles illustrés : lit retourné, évier posé, tabourets séparés", !f.some((x) => x.parts) && bed && bed.type === "lit2" && bed.rot === 180 && sink && st.length === 2, f);
+  check("illustration : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.screenshot({ path: `${OUT}/ed_illustre.png` });
   await p.close();
 }
 await b.close();

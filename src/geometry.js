@@ -119,7 +119,7 @@ export function buildModel(cfg) {
 
   const furniture = (cfg.furniture || []).map((f, i) => ({
     id: String(f.id || "f" + (i + 1)), type: f.type || null, name: f.name || null, x: num(f.x || 0) * M, y: num(f.y || 0) * M, rot: num(f.rot || 0),
-    parts: f.parts ? f.parts.map((p) => [p[0], ...p.slice(1).map((v) => num(v) * M)]) : null, style: f.style || null,
+    parts: f.parts ? f.parts.map((p) => [p[0], ...p.slice(1).map((v) => num(v) * M)]) : null, style: f.style || null, w: f.w != null ? num(f.w) * M : null, h: f.h != null ? num(f.h) * M : null, color: f.color || null,
   }));
 
   return { axes, auto, rooms, openings, zones, garden, garlands, devices, furniture, view: cfg.view ? cfg.view.map((v) => num(v) * M) : null };

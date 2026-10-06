@@ -1,7 +1,7 @@
 // plan-maison-card : plan de maison interactif et éditable pour Home Assistant.
 import { ICONS, ALWAYS, ACCENT, guess } from "./icons.js";
-import { CAT, FSTYLE } from "./furniture.js";
-import { furnSvg, FURN_DEFS } from "./furnart.js";
+import { CAT, FSTYLE, META, furnParts } from "./furniture.js";
+import { furnSvg, FURN_DEFS, furnLibHtml, furnSwatches, zoneArt } from "./furnart.js";
 import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG } from "./styles.js";
 import * as G from "./geometry.js";
 import { toYaml } from "./yaml.js";
@@ -9,14 +9,14 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.6.0";
+export const VERSION = "1.7.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
 const NA = ["unavailable", "unknown"];
 const KIND = { toggle: "t", info: "i", value: "l", widget: "w", t: "t", i: "i", l: "l", w: "w" };
-const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
-.err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
+const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.zart{pointer-events:none}.zone:hover .zart{opacity:.85}.zone.sel .zart{opacity:.6}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
+.err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.flwrap{max-height:min(60vh,520px);overflow:auto;display:flex;flex-direction:column;gap:6px}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
 
 const slug = (s) => String(s || "plan").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 const fr = (n, d) => (d == null ? String(Math.round(n * 100) / 100) : n.toFixed(d)).replace(".", ",");
@@ -260,9 +260,9 @@ class PlanMaisonCard extends HTMLElement {
     const L = this._L;
     const base = this._model.furniture.filter((f) => !(L.furn[f.id] && L.furn[f.id].del) && (f.parts || CAT[f.type])).map((f) => {
       const o = L.furn[f.id] || {}, c = CAT[f.type];
-      return { id: f.id, name: f.name || (c && c[0]) || "Meuble", x: o.x ?? f.x, y: o.y ?? f.y, rot: o.rot ?? f.rot ?? 0, parts: f.parts || c[1], st: f.style || FSTYLE[f.type] || "wood" };
+      return { id: f.id, type: f.parts ? null : f.type, color: o.color || f.color, name: f.name || (c && c[0]) || "Meuble", x: o.x ?? f.x, y: o.y ?? f.y, rot: o.rot ?? f.rot ?? 0, parts: f.parts || furnParts(f.type, f.w, f.h), st: f.style || FSTYLE[f.type] || "wood" };
     });
-    const added = L.added.filter((a) => CAT[a.type]).map((a) => ({ id: a.id, name: CAT[a.type][0], x: a.x, y: a.y, rot: a.rot || 0, parts: CAT[a.type][1], st: FSTYLE[a.type] || "wood", added: true }));
+    const added = L.added.filter((a) => CAT[a.type]).map((a) => ({ id: a.id, type: a.type, color: a.color, name: CAT[a.type][0], x: a.x, y: a.y, rot: a.rot || 0, parts: furnParts(a.type), st: FSTYLE[a.type] || "wood", added: true }));
     return base.concat(added);
   }
   _setFurn(f, patch) { if (f.added) Object.assign(this._L.added.find((a) => a.id === f.id) || {}, patch); else this._L.furn[f.id] = Object.assign({}, this._L.furn[f.id] || {}, patch); this._save(); }
@@ -390,6 +390,7 @@ class PlanMaisonCard extends HTMLElement {
       }
       const zr = el("rect", { x: x1, y: y1, width: w, height: h, rx: z.type === "pool" ? 1.5 : z.type === "patch" ? 1 : 0, class: z.type === "deck" ? "deck" : z.type }, zg);
       if (z.type === "gravel") zr.style.fill = "url(#pmgv)";
+      const za = zoneArt(z, x1, y1, w, h); if (za) zg.insertAdjacentHTML("beforeend", za);
       if (z.type === "deck" && z.pattern === "tiles") { for (let x = x1 + 5; x < x2; x += 5) el("line", { x1: x, y1, x2: x, y2, class: "slat" }, zg); for (let y = y1 + 5; y < y2; y += 5) el("line", { x1, y1: y, x2, y2: y, class: "slat" }, zg); }
       if (z.type === "deck" && z.pattern === "slats") for (let y = y1 + 2.5; y < y2; y += 2.5) el("line", { x1, y1: y, x2, y2: y, class: "slat" }, zg);
       if (z.posts) [[x1, y1], [x2, y1], [x1, y2], [x2, y2], ...(h > 30 ? [[x1, (y1 + y2) / 2], [x2, (y1 + y2) / 2]] : []), ...(w > 30 ? [[(x1 + x2) / 2, y1], [(x1 + x2) / 2, y2]] : [])].forEach(([px, py]) => el("rect", { x: px - 1, y: py - 1, width: 2, height: 2, class: "post" }, zg));
@@ -407,7 +408,7 @@ class PlanMaisonCard extends HTMLElement {
         const b = this._bbox(it.parts);
         const pg = el("g", { class: "piece fs-" + it.st + (this._sel && this._sel.k === "f" && this._sel.id === it.id ? " sel" : ""), "data-id": it.id, transform: `translate(${it.x},${it.y}) rotate(${it.rot},${b.cx},${b.cy})` }, fg);
         el("rect", { x: b.x - 0.6, y: b.y - 0.6, width: b.w + 1.2, height: b.h + 1.2, class: "hitr" }, pg);
-        pg.insertAdjacentHTML("beforeend", furnSvg(it.parts, it.st));
+        pg.insertAdjacentHTML("beforeend", furnSvg(it.parts, it.st, it.type, it.color));
         this._dragPiece(pg, it, b);
       });
     }
@@ -709,18 +710,14 @@ class PlanMaisonCard extends HTMLElement {
     this._placePop(this._mk[d.id].el);
   }
   _furnLib() {
-    const pop = this._pop; pop.classList.remove("xl"); pop.classList.add("wide");
-    const th = (k) => {
-      const parts = CAT[k][1], b = this._bbox(parts), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood";
-      return `<svg class="fth" viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="fs-${st}">${furnSvg(parts, st)}</g></svg>`;
-    };
-    pop.innerHTML = `<div><div class="t">Bibliothèque de mobilier</div><div class="s">Touche un meuble pour l'ajouter${this._focus ? " dans la pièce sélectionnée" : " au centre du plan (sélectionne d'abord une pièce en mode Consulter pour l'y placer)"}.</div></div><div class="ipk">${Object.keys(CAT).map((k) => `<button data-k="${k}" title="${esc(CAT[k][0])}">${th(k)}<span>${esc(CAT[k][0])}</span></button>`).join("")}</div><div class="row"><button class="btn" id="pm-x">Fermer</button></div>`;
+    const pop = this._pop; pop.classList.remove("wide"); pop.classList.add("xl");
+    pop.innerHTML = `<div><div class="t">Bibliothèque de mobilier</div><div class="s">Touche un meuble pour l'ajouter${this._focus ? " dans la pièce sélectionnée" : " au centre du plan (sélectionne d'abord une pièce en mode Consulter pour l'y placer)"}.</div></div><div class="flwrap">${furnLibHtml()}</div><div class="row"><button class="btn" id="pm-x">Fermer</button></div>`;
     pop.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._addFurn(b.dataset.k)));
     pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; };
     pop.hidden = false; pop.style.left = "8px"; pop.style.top = "8px";
   }
   _addFurn(type) {
-    const b = this._bbox(CAT[type][1]), c = this._center(); if (this._focus) c[1] += 6;
+    const b = this._bbox(furnParts(type)), c = this._center(); if (this._focus) c[1] += 6;
     const id = "a" + Date.now().toString(36);
     this._L.added.push({ id, type, x: Math.round((c[0] - b.w / 2) * 2) / 2, y: Math.round((c[1] - b.h / 2) * 2) / 2, rot: 0 });
     this._save(); this._sel = { k: "f", id }; this._build(); this._furnPop(id);
@@ -728,8 +725,10 @@ class PlanMaisonCard extends HTMLElement {
   _furnPop(id) {
     const it = this._furn().find((x) => x.id === id); if (!it) return;
     const pop = this._pop; pop.classList.remove("wide", "xl");
-    pop.innerHTML = `<div><div class="t">${esc(it.name)}</div><div class="s">Orientation ${it.rot}°</div></div><div class="row"><button class="btn" id="pm-rot">Pivoter de 90°</button><button class="btn danger" id="pm-del">Retirer</button><button class="btn" id="pm-x">Fermer</button></div>`;
+    const col = it.type && META[it.type] && META[it.type][4].includes("c");
+    pop.innerHTML = `<div><div class="t">${esc(it.name)}</div><div class="s">Orientation ${it.rot}°</div></div>${col ? `<div class="s">Couleur</div>${furnSwatches(it.type, it.color)}` : ""}<div class="row"><button class="btn" id="pm-rot">Pivoter de 90°</button><button class="btn danger" id="pm-del">Retirer</button><button class="btn" id="pm-x">Fermer</button></div>`;
     pop.querySelector("#pm-rot").onclick = () => { this._setFurn(it, { rot: (it.rot + 90) % 360 }); this._build(); this._furnPop(id); };
+    pop.querySelectorAll(".fsw button").forEach((b) => (b.onclick = () => { this._setFurn(it, { color: b.dataset.c }); this._build(); this._furnPop(id); }));
     pop.querySelector("#pm-del").onclick = () => this._delFurn(it);
     pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; this._sel = null; this._build(); };
     const n = this._svg.querySelector(`.piece[data-id="${id}"]`); if (n) this._placePop(n);

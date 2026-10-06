@@ -1,9 +1,9 @@
 // Éditeur visuel de la carte : dessiner le plan, placer équipements et meubles, régler le bandeau.
 // Home Assistant l'affiche dans la fenêtre « Modifier la carte » ; chaque modification émet « config-changed ».
 import { ICONS, ACCENT, guess } from "./icons.js";
-import { CAT, FSTYLE } from "./furniture.js";
+import { CAT, FSTYLE, META, furnParts, modernizeFurn, guessFurnType } from "./furniture.js";
 import { BASE_CSS, ICON_CSS } from "./styles.js";
-import { furnSvg, FURN_DEFS } from "./furnart.js";
+import { furnSvg, FURN_DEFS, furnLibHtml, furnSwatches, zoneArt } from "./furnart.js";
 import * as G from "./geometry.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, friendly } from "./picker.js";
 
@@ -90,7 +90,7 @@ svg .room{cursor:pointer;stroke:none}svg .room.sel{fill:var(--sel-soft)}
 svg .rlab{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;fill:var(--ink);pointer-events:none}
 svg .rar{font-family:var(--f-mono);fill:var(--ink-2);pointer-events:none}
 svg .zn{cursor:pointer;stroke:var(--deck-line);stroke-width:.5}svg .zn.sel{stroke:var(--sel);stroke-width:1}
-svg .z-deck{fill:var(--deck)}svg .z-shed{fill:var(--furn-fill);stroke:var(--ink)}svg .z-patch{fill:#cfe6b8}svg .z-pool{fill:#9fd6ef;stroke:#5ba7cc}svg .z-gravel{fill:#e6e0d4}
+svg .z-deck{fill:var(--deck)}svg .z-shed{fill:var(--furn-fill);stroke:var(--ink)}svg .z-patch{fill:#cfe6b8}svg .z-pool{fill:#9fd6ef;stroke:#5ba7cc}svg .z-gravel{fill:#e6e0d4}svg .zart{pointer-events:none}svg .zart.zsel{opacity:.55}
 :host(.dark) svg .z-patch{fill:#35502f}:host(.dark) svg .z-pool{fill:#2f5f78}:host(.dark) svg .z-gravel{fill:#3a372f}
 svg .zlab{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;fill:var(--ink-2);pointer-events:none}
 svg .ophit{fill:transparent;stroke:transparent;cursor:pointer}svg .op-sel{stroke:var(--sel);stroke-width:1.2;fill:none;pointer-events:none}
@@ -181,7 +181,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     }
     c.devices = S.devices.map((d) => { const o = { ...d.raw, entity: d.entity }; if (d.id !== d.entity) o.id = d.id; else delete o.id; if (d.pos) { o.x = m2(d.pos[0]); o.y = m2(d.pos[1]); } else { delete o.x; delete o.y; } return clean(o); });
     if (!c.devices.length) delete c.devices;
-    c.furniture = S.furniture.map((f) => { const o = { ...f.raw }; o.x = m2(f.x); o.y = m2(f.y); if (f.rot) o.rot = f.rot; else delete o.rot; if (!o.type && !o.parts && f.type) o.type = f.type; return clean(o); });
+    c.furniture = S.furniture.map((f) => { const o = { ...f.raw }; o.x = m2(f.x); o.y = m2(f.y); if (f.rot) o.rot = f.rot; else delete o.rot; if (f.w) o.w = m2(f.w); else delete o.w; if (f.h) o.h = m2(f.h); else delete o.h; if (f.color) o.color = f.color; else delete o.color; if (!o.type && !o.parts && f.type) o.type = f.type; return clean(o); });
     if (!c.furniture.length) delete c.furniture;
     if (!c.rooms) c.rooms = [];
     this._cfg = c; this._emitted = JSON.stringify(c);
@@ -341,17 +341,18 @@ class PlanMaisonCardEditor extends HTMLElement {
     S.zones.forEach((z, i) => {
       const [x1, y1, x2, y2] = z.rect, on = sel.k === "zone" && sel.i === i;
       el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, rx: z.type === "pool" ? 1.5 : 0, class: `zn z-${z.type}${on ? " sel" : ""}`, "data-k": "zone", "data-i": i }, s);
+      const za = zoneArt(z, x1, y1, x2 - x1, y2 - y1); if (za) s.insertAdjacentHTML("beforeend", za.replace('class="zart"', `class="zart${on ? " zsel" : ""}"`));
       el("text", { x: (x1 + x2) / 2, y: (y1 + y2) / 2 + 1, "text-anchor": "middle", class: "zlab", "font-size": Math.max(2, Math.min(3, (x2 - x1) / 8)) }, s).textContent = z.name;
     });
     // pièces
     S.rooms.forEach((r, i) => el("polygon", { points: r.pts.map((p) => p.join(",")).join(" "), class: `room ${r.kind}${sel.k === "room" && sel.i === i ? " sel" : ""}`, "data-k": "room", "data-i": i }, s));
     // mobilier
     if (this._showFurn) S.furniture.forEach((f, i) => {
-      const parts = f.parts || (CAT[f.type] && CAT[f.type][1]); if (!parts) return;
+      const parts = f.parts || furnParts(f.type, f.w, f.h); if (!parts) return;
       const b = bbox(parts), st = f.style || FSTYLE[f.type] || "wood";
       const g = el("g", { class: `piece fs-${st}${sel.k === "furn" && sel.i === i ? " sel" : ""}`, transform: `translate(${f.x},${f.y}) rotate(${f.rot || 0},${b.cx},${b.cy})`, "data-k": "furn", "data-i": i }, s);
-      el("rect", { x: b.x - 0.6, y: b.y - 0.6, width: b.w + 1.2, height: b.h + 1.2, fill: "transparent" }, g);
-      g.insertAdjacentHTML("beforeend", furnSvg(parts, st));
+      el("rect", { x: b.x - 0.6, y: b.y - 0.6, width: b.w + 1.2, height: b.h + 1.2, fill: "transparent", class: "hitr" }, g);
+      g.insertAdjacentHTML("beforeend", furnSvg(parts, st, f.parts ? null : f.type, f.color));
     });
     // murs et ouvertures
     const ops = S.openings.map((o) => ({ ...o, p: [o.a, o.b] }));
@@ -665,15 +666,16 @@ class PlanMaisonCardEditor extends HTMLElement {
     const box = this.$("props"), s = this._sel, S = this._S;
     if (!s) {
       box.innerHTML = `<h4>Ton plan</h4><p class="muted">${S.rooms.length} pièce${S.rooms.length > 1 ? "s" : ""}, ${S.openings.length} ouverture${S.openings.length > 1 ? "s" : ""}, ${S.zones.length} espace${S.zones.length > 1 ? "s" : ""} extérieur${S.zones.length > 1 ? "s" : ""}, ${S.devices.filter((d) => d.pos).length} équipement(s) placé(s), ${S.furniture.length} meuble(s).</p>
-        <p class="muted">Commence par dessiner les pièces avec l'outil « Pièce » : les murs se tracent tout seuls, épais en façade, fins entre deux pièces. Pose ensuite portes et fenêtres en touchant un mur. Les cotes s'affichent en mètres ; la grille fait 1 m.</p>`;
+        <p class="muted">Commence par dessiner les pièces avec l'outil « Pièce » : les murs se tracent tout seuls, épais en façade, fins entre deux pièces. Pose ensuite portes et fenêtres en touchant un mur. Les cotes s'affichent en mètres ; la grille fait 1 m.</p>${this._oldFurnHtml()}`;
+      this._oldFurnWire(box);
       return;
     }
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`;
     const num = (id, v, step = 0.05) => `<input type="number" id="${id}" step="${step}" value="${v}">`;
     if (s.k === "lib") {
-      const th = (k) => { const b = bbox(CAT[k][1]), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood"; return `<svg class="fth" viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="fs-${st}">${furnSvg(CAT[k][1], st)}</g></svg>`; };
-      box.innerHTML = `<h4>Ajouter un meuble</h4><p class="muted">Touche un meuble : il se pose au centre du plan (ou dans la pièce sélectionnée juste avant), puis glisse-le à sa place.</p><div class="ipk">${Object.keys(CAT).map((k) => `<button data-k="${k}" title="${esc(CAT[k][0])}">${th(k)}<span>${esc(CAT[k][0])}</span></button>`).join("")}</div><div class="btns"><button class="btn" id="x">Fermer</button></div>`;
+      box.innerHTML = `<h4>Ajouter un meuble</h4><p class="muted">Touche un meuble : il se pose au centre du plan (ou dans la pièce sélectionnée juste avant), puis glisse-le à sa place. Certains se redimensionnent (plan de travail, piscine, potager…) et les tissus changent de couleur.</p>${furnLibHtml()}<div class="btns"><button class="btn" id="x">Fermer</button></div>${this._oldFurnHtml()}`;
       box.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._addFurn(b.dataset.k)));
+      this._oldFurnWire(box);
       box.querySelector("#x").onclick = () => { this._sel = null; this._props(); };
       return;
     }
@@ -759,13 +761,41 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (s.k === "furn") {
       const f = S.furniture[s.i]; if (!f) return;
       const name = f.name || (CAT[f.type] && CAT[f.type][0]) || "Meuble";
+      const M = !f.parts && META[f.type], rs = M && M[4].includes("s"), col = M && M[4].includes("c");
       box.innerHTML = `<h4>Meuble</h4><div class="f2">${field("Nom", `<input id="nm" value="${esc(name)}">`)}<div class="fld">Orientation<span style="color:var(--ink)">${f.rot || 0}°</span></div></div>
+        ${rs ? `<div class="f2">${field("Largeur (m)", num("fw", m2(f.w || M[2]), 0.05))}${field("Profondeur (m)", num("fh", m2(f.h || M[3]), 0.05))}</div>${f.w || f.h ? '<div class="btns"><button class="btn" id="fsz">Taille d\'origine</button></div>' : ""}` : ""}
+        ${col ? `<div class="fld">Couleur</div>${furnSwatches(f.type, f.color)}` : ""}
+        ${f.parts ? `<p class="muted">Meuble dessiné avec de simples formes.</p><div class="btns"><button class="btn solid" id="mod1">Remplacer par l'illustration « ${esc((META[guessFurnType(f.name, f.style, f.parts)] || ["?"])[0])} »</button></div>` : ""}
         <div class="btns"><button class="btn" id="rot">Pivoter de 90° (R)</button><button class="btn" id="dup">Dupliquer</button><button class="btn danger" id="del">Supprimer</button></div>`;
+      const m1 = box.querySelector("#mod1"); if (m1) m1.onclick = () => this._modernize(s.i);
+      if (rs) {
+        const setSz = (k, v) => { const d = Math.max(1, Math.round(parseFloat(String(v).replace(",", ".")) * 20) / 2); if (!isFinite(d)) return; this._change(() => { f[k] = d; if ((f.w || M[2]) === M[2] && (f.h || M[3]) === M[3]) { f.w = null; f.h = null; } else { f.w = f.w || M[2]; f.h = f.h || M[3]; } }, { keepProps: true }); };
+        box.querySelector("#fw").onchange = (e) => setSz("w", e.target.value);
+        box.querySelector("#fh").onchange = (e) => setSz("h", e.target.value);
+        const rz = box.querySelector("#fsz"); if (rz) rz.onclick = () => this._change(() => { f.w = null; f.h = null; });
+      }
+      box.querySelectorAll(".fsw button").forEach((b) => (b.onclick = () => this._change(() => (f.color = b.dataset.c === M[5] ? null : b.dataset.c))));
       box.querySelector("#nm").onchange = (e) => this._change(() => { f.name = e.target.value.trim() || null; f.raw.name = f.name || undefined; });
       box.querySelector("#rot").onclick = () => this._change(() => (f.rot = ((f.rot || 0) + 90) % 360));
       box.querySelector("#dup").onclick = () => this._change(() => { const n = clone(f); n.id = "m" + Date.now().toString(36); n.raw.id = n.id; n.x += 4; n.y += 4; S.furniture.push(n); this._sel = { k: "furn", i: S.furniture.length - 1 }; });
       box.querySelector("#del").onclick = () => this._delete();
     }
+  }
+  /** Meubles dessinés à la main (parts) : proposition de les remplacer par les illustrations du catalogue. */
+  _oldFurnHtml() {
+    const n = this._S.furniture.filter((f) => f.parts).length;
+    return n ? `<div class="props"><h4>Mobilier illustré</h4><p class="muted">${n} meuble${n > 1 ? "s sont dessinés" : " est dessiné"} avec de simples formes. Remplace-les par les illustrations du catalogue (lits, cuisine, salle de bain…), à la même place et à la même taille ; tu pourras ensuite les pivoter (R) si besoin.</p><div class="btns"><button class="btn solid" id="modall">Illustrer ${n > 1 ? `les ${n} meubles` : "ce meuble"}</button></div></div>` : "";
+  }
+  _oldFurnWire(box) { const b = box.querySelector("#modall"); if (b) b.onclick = () => this._modernize(); }
+  _modernize(only) {
+    this._change(() => {
+      const out = [];
+      this._S.furniture.forEach((f, i) => {
+        if (!f.parts || (only != null && only !== i)) { out.push(f); return; }
+        modernizeFurn(f).forEach((o, k) => out.push({ id: k ? f.id + "_" + (k + 1) : f.id, type: o.type, name: o.name, x: o.x, y: o.y, rot: o.rot, w: o.w || null, h: o.h || null, color: null, parts: null, style: null, raw: clean({ id: k ? f.id + "_" + (k + 1) : f.id, name: o.name || undefined, type: o.type }) }));
+      });
+      this._S.furniture = out; if (only != null) this._sel = { k: "furn", i: only };
+    });
   }
   _devProps(box, d, i) {
     if (!d) return;
@@ -907,8 +937,8 @@ class PlanMaisonCardEditor extends HTMLElement {
     S.devices.forEach((d) => { if (L.pos && L.pos[d.id]) d.pos = L.pos[d.id]; if (L.icons && L.icons[d.id]) d.raw.icon = L.icons[d.id]; });
     (L.devAdded || []).forEach((a) => S.devices.push({ id: a.entity, entity: a.entity, pos: (L.pos && L.pos[a.id]) || a.pos || null, raw: clean({ icon: (L.icons && L.icons[a.id]) || a.ik }) }));
     S.furniture = S.furniture.filter((f) => !(L.furn && L.furn[f.id] && L.furn[f.id].del));
-    S.furniture.forEach((f) => { const o = L.furn && L.furn[f.id]; if (o) { if (o.x != null) f.x = o.x; if (o.y != null) f.y = o.y; if (o.rot != null) f.rot = o.rot; } });
-    (L.added || []).forEach((a) => { if (CAT[a.type]) S.furniture.push({ id: a.id, type: a.type, name: null, x: a.x, y: a.y, rot: a.rot || 0, parts: null, style: null, raw: { id: a.id, type: a.type } }); });
+    S.furniture.forEach((f) => { const o = L.furn && L.furn[f.id]; if (o) { if (o.x != null) f.x = o.x; if (o.y != null) f.y = o.y; if (o.rot != null) f.rot = o.rot; if (o.color) f.color = o.color; } });
+    (L.added || []).forEach((a) => { if (CAT[a.type]) S.furniture.push({ id: a.id, type: a.type, name: null, x: a.x, y: a.y, rot: a.rot || 0, parts: null, style: null, color: a.color || null, raw: { id: a.id, type: a.type } }); });
     this._emit();
     try { await this._hass.callWS({ type: "frontend/set_user_data", key: this._lkey(), value: {} }); } catch (e) { /* rien */ }
     window.dispatchEvent(new CustomEvent("plan-maison-layout-reset", { detail: { key: this._lkey() } }));
