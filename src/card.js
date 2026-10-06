@@ -1,6 +1,7 @@
 // plan-maison-card : plan de maison interactif et éditable pour Home Assistant.
-import { ICONS, ALWAYS, guess } from "./icons.js";
+import { ICONS, ALWAYS, ACCENT, guess } from "./icons.js";
 import { CAT, FSTYLE } from "./furniture.js";
+import { furnSvg, FURN_DEFS } from "./furnart.js";
 import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG } from "./styles.js";
 import * as G from "./geometry.js";
 import { toYaml } from "./yaml.js";
@@ -8,7 +9,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.4.1";
+export const VERSION = "1.5.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -312,7 +313,7 @@ class PlanMaisonCard extends HTMLElement {
     const rg = el("radialGradient", { id: "pmt", cx: 0.38, cy: 0.34, r: 0.7 }, defs); el("stop", { offset: 0, class: "hi0" }, rg); el("stop", { offset: 0.55, class: "hi1" }, rg); el("stop", { offset: 1, class: "hi2" }, rg);
     const rug = el("pattern", { id: "pmrug", width: 2, height: 2, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs); el("rect", { width: 2, height: 2, class: "rg1" }, rug); el("rect", { width: 1, height: 2, class: "rg2" }, rug);
     const gv = el("pattern", { id: "pmgv", width: 2.4, height: 2.4, patternUnits: "userSpaceOnUse" }, defs); el("circle", { cx: 0.6, cy: 0.6, r: 0.28, fill: "#b9ad97" }, gv); el("circle", { cx: 1.8, cy: 1.7, r: 0.22, fill: "#a99c84" }, gv);
-    const fsh = el("filter", { id: "pmfs", x: "-20%", y: "-20%", width: "140%", height: "140%" }, defs); el("feDropShadow", { dx: 0.25, dy: 0.35, stdDeviation: 0.35, "flood-opacity": 0.25 }, fsh);
+    const fsh = el("filter", { id: "pmfs", x: "-40%", y: "-40%", width: "180%", height: "180%" }, defs); el("feDropShadow", { dx: 0.25, dy: 0.35, stdDeviation: 0.35, "flood-opacity": 0.25 }, fsh); defs.insertAdjacentHTML("beforeend", FURN_DEFS);
     this._cg = el("g", {}, s); this._content(this._cg);
     if (this._mode === "walls") this._handles(el("g", {}, s));
     this._overlay(); this._states();
@@ -378,13 +379,7 @@ class PlanMaisonCard extends HTMLElement {
         const b = this._bbox(it.parts);
         const pg = el("g", { class: "piece fs-" + it.st + (this._sel && this._sel.k === "f" && this._sel.id === it.id ? " sel" : ""), "data-id": it.id, transform: `translate(${it.x},${it.y}) rotate(${it.rot},${b.cx},${b.cy})` }, fg);
         el("rect", { x: b.x - 0.6, y: b.y - 0.6, width: b.w + 1.2, height: b.h + 1.2, class: "hitr" }, pg);
-        it.parts.forEach((q, i) => {
-          if (q[0] === "r") el("rect", { x: q[1], y: q[2], width: q[3], height: q[4], rx: q[5] || 0, class: "f p" + i }, pg);
-          else if (q[0] === "c") el("circle", { cx: q[1], cy: q[2], r: q[3], class: "f p" + i }, pg);
-          else if (q[0] === "e") el("ellipse", { cx: q[1], cy: q[2], rx: q[3], ry: q[4], class: "f p" + i }, pg);
-          else el("line", { x1: q[1], y1: q[2], x2: q[3], y2: q[4], class: "l p" + i }, pg);
-        });
-        if (it.st === "plant") this._leaves(b).forEach((a) => el(a[0], a[1], pg));
+        pg.insertAdjacentHTML("beforeend", furnSvg(it.parts, it.st));
         this._dragPiece(pg, it, b);
       });
     }
@@ -413,12 +408,6 @@ class PlanMaisonCard extends HTMLElement {
       el("text", { x, y, "text-anchor": "middle", class: "lab" + (f === r.id ? " sel" : ""), "font-size": fs }, g).textContent = this._rname(r);
       el("text", { x, y: y + fs * 0.95, "text-anchor": "middle", class: "area", "font-size": Math.max(1.9, fs * 0.62) }, g).textContent = (r.area != null ? "" : "≈ ") + fr(a) + " m²";
     });
-  }
-  _leaves(b) {
-    const r = Math.min(b.w, b.h) / 2, out = [];
-    for (let k = 0; k < 7; k++) { const an = (k * 360) / 7 + 15, lx = b.cx + Math.cos((an * Math.PI) / 180) * r * 0.5, ly = b.cy + Math.sin((an * Math.PI) / 180) * r * 0.5; out.push(["ellipse", { cx: lx, cy: ly, rx: r * 0.5, ry: r * 0.22, transform: `rotate(${an} ${lx} ${ly})`, class: "lf" }]); }
-    out.push(["circle", { cx: b.cx, cy: b.cy, r: r * 0.22, class: "lf" }]);
-    return out;
   }
   _lightsDraw(g) {
     const el = this._el.bind(this);
@@ -498,7 +487,7 @@ class PlanMaisonCard extends HTMLElement {
       m.className = "mk" + (d.kind === "l" ? " lab" : d.kind === "w" ? " wg wg-" + d.wg : "") + (this._sel && this._sel.k === "d" && this._sel.id === d.id ? " sel" : "");
       m.style.left = l + "%"; m.style.top = t + "%";
       if (d.kind === "w") m.innerHTML = WSVG[d.wg] + '<span class="v"></span>';
-      else if (d.kind !== "l") { if (d.mdi) { const i = document.createElement("ha-icon"); i.setAttribute("icon", d.mdi); m.appendChild(i); } else m.innerHTML = (ICONS[d.ik] || ICONS.generic)[1]; }
+      else if (d.kind !== "l") { if (d.mdi) { const i = document.createElement("ha-icon"); i.setAttribute("icon", d.mdi); m.appendChild(i); } else { m.innerHTML = (ICONS[d.ik] || ICONS.generic)[1]; if (ACCENT[d.ik]) m.style.setProperty("--ac", ACCENT[d.ik]); } }
       o.appendChild(m); this._mk[d.id] = { el: m, d }; this._devEvents(m, d, p);
     });
   }
@@ -557,7 +546,15 @@ class PlanMaisonCard extends HTMLElement {
     if (d.ik === "solar") on = parseFloat(st && st.state) > 0;
     if (d.ik === "printer") on = !!st && ["home", "printing", "on"].includes(st.state);
     if (d.ik === "tablet") on = on || (!!st && st.state === "on");
-    m.classList.toggle("act", on);
+    const S = st ? st.state : "";
+    if (d.ik === "lock") on = S === "locked" || S === "on";
+    if (d.ik === "vacuum") on = ["cleaning", "returning", "on"].includes(S);
+    if (d.ik === "speaker" || d.ik === "tv") on = on || ["playing", "on", "buffering"].includes(S);
+    if (d.ik === "garage") on = on || ["open", "opening"].includes(S);
+    if (d.ik === "ev") on = on || ["charging", "on"].includes(S) || parseFloat(S) > 0;
+    if (d.ik === "washer" || d.ik === "dishwasher" || d.ik === "coffee" || d.ik === "oven") on = on || ["running", "on", "heating", "washing", "drying"].includes(String(S).toLowerCase());
+    if (d.ik === "thermostat" || d.ik === "radiator" || d.ik === "fire") on = on || (st && ["heating", "heat"].includes(st.attributes.hvac_action || S));
+    m.classList.toggle("act", !!on);
   }
   _states() {
     if (!this._mk) return;
@@ -664,7 +661,7 @@ class PlanMaisonCard extends HTMLElement {
     const pop = this._pop, pick = d.kind !== "w" && d.kind !== "l", ov = !!this._L.icons[d.id];
     pop.classList.remove("xl"); pop.classList.toggle("wide", pick);
     pop.innerHTML = `<div><div class="t">${esc(this._nm(d))}</div><div class="s" title="${esc(d.entity)}">${esc(describe(this._hass, d.entity))}</div></div>` +
-      (pick ? `<div class="s">Icône animée${ov ? "" : " (choisie automatiquement)"} : touche pour changer</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" class="${d.ik === k && !d.mdi ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>` : "") +
+      (pick ? `<div class="s">Icône animée${ov ? "" : " (choisie automatiquement)"} : touche pour changer</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${d.ik === k && !d.mdi ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>` : "") +
       `<div class="row"><button class="btn" id="pm-more">Fiche</button>${ov ? '<button class="btn" id="pm-auto">Icône auto</button>' : ""}<button class="btn danger" id="pm-del">Retirer du plan</button><button class="btn" id="pm-x">Fermer</button></div>`;
     const reopen = () => { this._save(); this._sel = { k: "d", id: d.id }; this._build(); const nd = this._devs().find((x) => x.id === d.id); if (nd && this._mk[d.id]) this._devPop(nd); };
     pop.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => { this._L.icons[d.id] = b.dataset.k; reopen(); }));
@@ -678,13 +675,11 @@ class PlanMaisonCard extends HTMLElement {
     });
     this._placePop(this._mk[d.id].el);
   }
-  _partsSvg(parts) { return parts.map((q, i) => q[0] === "r" ? `<rect class="f p${i}" x="${q[1]}" y="${q[2]}" width="${q[3]}" height="${q[4]}" rx="${q[5] || 0}"/>` : q[0] === "c" ? `<circle class="f p${i}" cx="${q[1]}" cy="${q[2]}" r="${q[3]}"/>` : q[0] === "e" ? `<ellipse class="f p${i}" cx="${q[1]}" cy="${q[2]}" rx="${q[3]}" ry="${q[4]}"/>` : `<line class="l p${i}" x1="${q[1]}" y1="${q[2]}" x2="${q[3]}" y2="${q[4]}"/>`).join(""); }
   _furnLib() {
     const pop = this._pop; pop.classList.remove("xl"); pop.classList.add("wide");
     const th = (k) => {
       const parts = CAT[k][1], b = this._bbox(parts), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood";
-      const lv = st === "plant" ? this._leaves(b).map(([t, a]) => `<${t} ${Object.entries(a).map(([kk, v]) => `${kk}="${v}"`).join(" ")}/>`).join("") : "";
-      return `<svg class="fth" viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="fs-${st}">${this._partsSvg(parts)}${lv}</g></svg>`;
+      return `<svg class="fth" viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="fs-${st}">${furnSvg(parts, st)}</g></svg>`;
     };
     pop.innerHTML = `<div><div class="t">Bibliothèque de mobilier</div><div class="s">Touche un meuble pour l'ajouter${this._focus ? " dans la pièce sélectionnée" : " au centre du plan (sélectionne d'abord une pièce en mode Consulter pour l'y placer)"}.</div></div><div class="ipk">${Object.keys(CAT).map((k) => `<button data-k="${k}" title="${esc(CAT[k][0])}">${th(k)}<span>${esc(CAT[k][0])}</span></button>`).join("")}</div><div class="row"><button class="btn" id="pm-x">Fermer</button></div>`;
     pop.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._addFurn(b.dataset.k)));

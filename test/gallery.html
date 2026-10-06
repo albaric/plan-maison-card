@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Planche des icônes et du mobilier</title>
+<style>body{margin:0;font-family:sans-serif;background:#e9ecef}</style></head><body><div id="host"></div>
+<script type="module">
+import { ICONS, ACCENT } from "../src/icons.js";
+import { BASE_CSS, ICON_CSS } from "../src/styles.js";
+const host = document.getElementById("host"), root = host.attachShadow({ mode: "open" });
+if ((location.hash === "#dark" || location.search.includes("dark"))) host.classList.add("dark");
+const big = new URLSearchParams(location.search).get("size") || "64";
+root.innerHTML = `<style>${BASE_CSS}${ICON_CSS}
+:host{display:block;background:var(--paper);padding:14px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.c{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;font:12px sans-serif;color:var(--ink)}
+.r{display:flex;gap:14px;align-items:center}
+.mk{position:relative!important;transform:none!important;width:${big}px!important;height:${big}px!important}
+.mk .ico{width:${big * 0.66}px!important;height:${big * 0.66}px!important}
+.sm .mk{width:34px!important;height:34px!important}.sm .mk .ico{width:23px!important;height:23px!important}
+</style><div class="g">${Object.entries(ICONS).map(([k, v]) => `<div class="c"><div class="r"><div class="mk">${v[1]}</div><div class="mk act" style="--ac:${ACCENT[k] || "var(--sel)"}">${v[1]}</div></div><div class="r sm"><div class="mk">${v[1]}</div><div class="mk act" style="--ac:${ACCENT[k] || "var(--sel)"}">${v[1]}</div></div><b>${v[0]}</b><span style="color:var(--ink-2)">${k}</span></div>`).join("")}</div>`;
+</script></body></html>

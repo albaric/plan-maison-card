@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 1.5.0
+
+- Icônes animées entièrement redessinées, en couleur : 46 icônes (14 nouvelles : borne de recharge, porte de garage, serrure, sonnette, thermostat, pompe à chaleur, purificateur, piscine, lave-linge, réfrigérateur, four, cafetière, aspirateur, enceinte).
+- Chaque famille d'appareils a sa couleur (lumière, ouvrants, sécurité, chauffage, eau, cuisine, multimédia, réseau…) : une pastille active prend cette couleur avec un halo qui pulse ; une pastille éteinte est désaturée pour faire ressortir ce qui marche.
+- Animations plus vivantes : l'ampoule rayonne, la porte et le garage s'ouvrent, la serrure se déverrouille, l'aspirateur roule, le lave-linge tourne, la cafetière fume, l'enceinte vibre, le robinet coule…
+- Mobilier illustré : bois veiné, tissus avec coussins, lits avec oreillers et couette, céramique et eau pour la salle de bain, plan de travail en pierre, plaques de cuisson, électroménager avec hublot, feuillages qui ondulent, braises du barbecue, halo du lampadaire. Rendu adapté au thème sombre.
+- La bibliothèque de mobilier (carte et éditeur) montre les mêmes illustrations.
+
 ## 1.4.1
 
 - Bandeau de l'éditeur revu : un bouton « + Ajouter une tuile » ouvre la recherche du capteur ; chaque tuile est une fiche avec sa valeur actuelle, son titre, sa ligne secondaire (avec aperçu) et ses boutons monter / descendre / supprimer.

@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Planche du mobilier</title>
+<style>body{margin:0;font-family:sans-serif;background:#e9ecef}</style></head><body><div id="host"></div>
+<script type="module">
+import { CAT, FSTYLE } from "../src/furniture.js";
+import { furnSvg, FURN_DEFS } from "../src/furnart.js";
+import { BASE_CSS, ICON_CSS } from "../src/styles.js";
+const host = document.getElementById("host"), root = host.attachShadow({ mode: "open" });
+if ((location.hash === "#dark" || location.search.includes("dark"))) host.classList.add("dark");
+const bb = (parts) => { let x1 = 1e9, y1 = 1e9, x2 = -1e9, y2 = -1e9; const e = (a, b, c, d) => { x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d); };
+  parts.forEach((p) => p[0] === "r" ? e(p[1], p[2], p[1] + p[3], p[2] + p[4]) : p[0] === "c" ? e(p[1] - p[3], p[2] - p[3], p[1] + p[3], p[2] + p[3]) : p[0] === "e" ? e(p[1] - p[3], p[2] - p[4], p[1] + p[3], p[2] + p[4]) : e(Math.min(p[1], p[3]), Math.min(p[2], p[4]), Math.max(p[1], p[3]), Math.max(p[2], p[4])));
+  return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }; };
+root.innerHTML = `<style>${BASE_CSS}${ICON_CSS}
+:host{display:block;background:var(--paper);padding:14px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.c{background:var(--t-jour);border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;font:12px sans-serif;color:var(--ink)}
+.c svg{width:150px;height:120px}
+</style><svg width="0" height="0" style="position:absolute"><defs><filter id="pmfs" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx=".25" dy=".35" stdDeviation=".35" flood-opacity=".25"/></filter>${FURN_DEFS}</defs></svg>
+<div class="g">${Object.entries(CAT).map(([k, v]) => { const b = bb(v[1]), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood";
+  return `<div class="c"><svg viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="piece fs-${st}">${furnSvg(v[1], st)}</g></svg><b>${v[0]}</b><span style="color:var(--ink-2)">${k} · ${st}</span></div>`; }).join("")}</div>`;
+</script></body></html>

@@ -1,8 +1,9 @@
 // Éditeur visuel de la carte : dessiner le plan, placer équipements et meubles, régler le bandeau.
 // Home Assistant l'affiche dans la fenêtre « Modifier la carte » ; chaque modification émet « config-changed ».
-import { ICONS, guess } from "./icons.js";
+import { ICONS, ACCENT, guess } from "./icons.js";
 import { CAT, FSTYLE } from "./furniture.js";
 import { BASE_CSS, ICON_CSS } from "./styles.js";
+import { furnSvg, FURN_DEFS } from "./furnart.js";
 import * as G from "./geometry.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, friendly } from "./picker.js";
 
@@ -328,7 +329,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     el("path", { d: "M10 0H0V10", class: "g1", fill: "none" }, g1);
     const hp = el("pattern", { id: "pmh", width: 3, height: 3, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
     el("rect", { width: 3, height: 3, class: "hb" }, hp); el("line", { x1: 0, y1: 0, x2: 0, y2: 3, class: "hl" }, hp);
-    const rug = el("pattern", { id: "pmrug", width: 2, height: 2, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs); el("rect", { width: 2, height: 2, class: "rg1" }, rug); el("rect", { width: 1, height: 2, class: "rg2" }, rug);
+    const rug = el("pattern", { id: "pmrug", width: 2, height: 2, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs); el("rect", { width: 2, height: 2, class: "rg1" }, rug); el("rect", { width: 1, height: 2, class: "rg2" }, rug); const fsh = el("filter", { id: "pmfs", x: "-40%", y: "-40%", width: "180%", height: "180%" }, defs); el("feDropShadow", { dx: 0.25, dy: 0.35, stdDeviation: 0.35, "flood-opacity": 0.25 }, fsh); defs.insertAdjacentHTML("beforeend", FURN_DEFS);
     el("rect", { x: V[0], y: V[1], width: V[2], height: V[3], class: "grid", "data-k": "bg" }, s);
     for (let x = Math.ceil(V[0] / 50) * 50; x < V[0] + V[2]; x += 50) el("line", { x1: x, y1: V[1], x2: x, y2: V[1] + V[3], class: "g5" }, s);
     for (let y = Math.ceil(V[1] / 50) * 50; y < V[1] + V[3]; y += 50) el("line", { x1: V[0], y1: y, x2: V[0] + V[2], y2: y, class: "g5" }, s);
@@ -349,12 +350,7 @@ class PlanMaisonCardEditor extends HTMLElement {
       const b = bbox(parts), st = f.style || FSTYLE[f.type] || "wood";
       const g = el("g", { class: `piece fs-${st}${sel.k === "furn" && sel.i === i ? " sel" : ""}`, transform: `translate(${f.x},${f.y}) rotate(${f.rot || 0},${b.cx},${b.cy})`, "data-k": "furn", "data-i": i }, s);
       el("rect", { x: b.x - 0.6, y: b.y - 0.6, width: b.w + 1.2, height: b.h + 1.2, fill: "transparent" }, g);
-      parts.forEach((q, k) => {
-        if (q[0] === "r") el("rect", { x: q[1], y: q[2], width: q[3], height: q[4], rx: q[5] || 0, class: "f p" + k }, g);
-        else if (q[0] === "c") el("circle", { cx: q[1], cy: q[2], r: q[3], class: "f p" + k }, g);
-        else if (q[0] === "e") el("ellipse", { cx: q[1], cy: q[2], rx: q[3], ry: q[4], class: "f p" + k }, g);
-        else el("line", { x1: q[1], y1: q[2], x2: q[3], y2: q[4], class: "l p" + k }, g);
-      });
+      g.insertAdjacentHTML("beforeend", furnSvg(parts, st));
     });
     // murs et ouvertures
     const ops = S.openings.map((o) => ({ ...o, p: [o.a, o.b] }));
@@ -401,8 +397,8 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (this._showDev) S.devices.forEach((d, i) => {
       if (!d.pos) return;
       const g = el("g", { class: "dv" + (sel.k === "dev" && sel.i === i ? " sel" : ""), "data-k": "dev", "data-i": i, transform: `translate(${d.pos[0]},${d.pos[1]})` }, s);
-      el("circle", { r: 3 }, g);
-      const ik = this._devIcon(d), inner = el("g", {}, g);
+      const ik = this._devIcon(d); el("circle", { r: 3, style: `stroke:${ACCENT[ik] || "var(--ink-2)"}` }, g);
+      const inner = el("g", {}, g);
       inner.innerHTML = (ICONS[ik] || ICONS.generic)[1].replace('<svg class="ico', '<svg x="-2.1" y="-2.1" width="4.2" height="4.2" style="width:4.2px;height:4.2px;display:inline" class="ico');
       el("title", {}, g).textContent = this._devName(d);
     });
@@ -674,7 +670,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`;
     const num = (id, v, step = 0.05) => `<input type="number" id="${id}" step="${step}" value="${v}">`;
     if (s.k === "lib") {
-      const th = (k) => { const b = bbox(CAT[k][1]), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood"; return `<svg class="fth" viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="fs-${st}">${partsSvg(CAT[k][1])}</g></svg>`; };
+      const th = (k) => { const b = bbox(CAT[k][1]), m = Math.max(b.w, b.h) * 0.12 + 0.6, st = FSTYLE[k] || "wood"; return `<svg class="fth" viewBox="${b.x - m} ${b.y - m} ${b.w + 2 * m} ${b.h + 2 * m}"><g class="fs-${st}">${furnSvg(CAT[k][1], st)}</g></svg>`; };
       box.innerHTML = `<h4>Ajouter un meuble</h4><p class="muted">Touche un meuble : il se pose au centre du plan (ou dans la pièce sélectionnée juste avant), puis glisse-le à sa place.</p><div class="ipk">${Object.keys(CAT).map((k) => `<button data-k="${k}" title="${esc(CAT[k][0])}">${th(k)}<span>${esc(CAT[k][0])}</span></button>`).join("")}</div><div class="btns"><button class="btn" id="x">Fermer</button></div>`;
       box.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._addFurn(b.dataset.k)));
       box.querySelector("#x").onclick = () => { this._sel = null; this._props(); };
@@ -774,7 +770,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (!d) return;
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`, ik = this._devIcon(d);
     box.innerHTML = `<h4>Équipement</h4><div class="f2"><div class="fld">Appareil<span id="en"></span></div>${field("Nom affiché", `<input id="nm" value="${esc(d.raw.name || "")}" placeholder="${esc(this._devName(d))}">`)}${field("Au clic", `<select id="kd">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select>`)}</div>
-      <div class="s">Icône animée${d.raw.icon ? "" : " (choisie automatiquement)"} :</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" class="${ik === k ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>
+      <div class="s">Icône animée${d.raw.icon ? "" : " (choisie automatiquement)"} :</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${ik === k ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>
       <div class="btns">${d.raw.icon ? '<button class="btn" id="auto">Icône automatique</button>' : ""}<button class="btn" id="unplace">Retirer du plan</button><button class="btn danger" id="del">Supprimer l'équipement</button></div>`;
     const S = this._S;
     this._picker(box.querySelector("#en"), d.entity, (v) => this._setEntity(d, v), { domains: DEVICE_DOMAINS });
@@ -937,6 +933,5 @@ function bbox(parts) {
   parts.forEach((p) => { if (p[0] === "r") e(p[1], p[2], p[1] + p[3], p[2] + p[4]); else if (p[0] === "c") e(p[1] - p[3], p[2] - p[3], p[1] + p[3], p[2] + p[3]); else if (p[0] === "e") e(p[1] - p[3], p[2] - p[4], p[1] + p[3], p[2] + p[4]); else e(Math.min(p[1], p[3]), Math.min(p[2], p[4]), Math.max(p[1], p[3]), Math.max(p[2], p[4])); });
   return { x: a, y: b, w: c - a, h: d - b, cx: (a + c) / 2, cy: (b + d) / 2 };
 }
-function partsSvg(parts) { return parts.map((q, i) => q[0] === "r" ? `<rect class="f p${i}" x="${q[1]}" y="${q[2]}" width="${q[3]}" height="${q[4]}" rx="${q[5] || 0}"/>` : q[0] === "c" ? `<circle class="f p${i}" cx="${q[1]}" cy="${q[2]}" r="${q[3]}"/>` : q[0] === "e" ? `<ellipse class="f p${i}" cx="${q[1]}" cy="${q[2]}" rx="${q[3]}" ry="${q[4]}"/>` : `<line class="l p${i}" x1="${q[1]}" y1="${q[2]}" x2="${q[3]}" y2="${q[4]}"/>`).join(""); }
 
 if (!customElements.get("plan-maison-card-editor")) customElements.define("plan-maison-card-editor", PlanMaisonCardEditor);

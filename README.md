@@ -12,9 +12,9 @@ Tout se règle en YAML, puis s'ajuste à la souris directement sur le plan : clo
 
 - **Plan vectoriel** : les pièces sont des polygones en mètres. Les murs sont déduits des pièces : un bord partagé devient une cloison, un bord seul devient la façade (trait épais). Portes, passages et fenêtres découpent ou habillent les murs.
 - **Mode Murs** : chaque cloison a une poignée. Les pièces, portes et fenêtres qui en dépendent suivent, et les cloisons voisines sont poussées si besoin. Un tableau compare les surfaces calculées à celles que tu as indiquées.
-- **Équipements animés** : 32 icônes animées (ampoule, guirlande, porte qui s'ouvre, arroseur, poêle, caméra qui balaie…). L'icône est devinée d'après l'entité, et tu peux en changer en touchant la pastille en mode Équipements.
+- **Équipements animés** : 46 icônes animées en couleur, rangées par familles (lumière, ouvrants, sécurité, chauffage, eau, cuisine, multimédia, réseau…) : l'ampoule rayonne, la porte s'ouvre, l'aspirateur roule, le robinet coule, la caméra balaie ; un halo de la couleur de la famille signale les appareils actifs. L'icône est devinée d'après l'entité, et tu peux en changer en touchant la pastille en mode Équipements.
 - **Widgets météo** sur le plan : thermomètre, anémomètre (vitesse de rotation liée au vent), pluviomètre (le bocal se remplit), baromètre (aiguille). Ils sont choisis automatiquement selon la classe du capteur.
-- **Mobilier** coloré avec une bibliothèque de 36 meubles (lits, canapés, cuisine, salle de bain, jardin…).
+- **Mobilier** illustré (bois veiné, tissus, oreillers et couette, céramique, eau, plaques, feuillages qui ondulent, braises du barbecue) avec une bibliothèque de 36 meubles (lits, canapés, cuisine, salle de bain, jardin…).
 - **Guirlandes lumineuses** dessinées sur le plan, qui s'allument avec leur entité.
 - **Bandeau** de tuiles (météo ou autres capteurs) et panneau **« À regarder »** : équipements indisponibles, portes ouvertes, piles faibles, mises à jour, plus tes propres règles.
 - Thème clair et sombre (suit Home Assistant), animations coupées si le système demande moins de mouvement.
@@ -247,7 +247,7 @@ Ces réglages faits directement sur la carte sont enregistrés **pour ton compte
 
 ### Icônes animées
 
-`bulb` Ampoule · `bulbrgb` Ampoule couleur · `lamp` Lampe · `ceiling` Plafonnier, applique · `string` Guirlande · `guinguette` Guinguette · `spot` Projecteur · `flood` Éclairage extérieur · `socket` Prise · `strip` Multiprise · `mosquito` Anti-moustiques · `door` Porte · `window` Fenêtre, baie · `shutter` Volet · `motion` Présence · `camera` Caméra · `fire` Poêle, cheminée · `radiator` Radiateur · `fan` Ventilateur · `faucet` Robinet · `sprinkler` Arroseur · `valve` Vanne · `dishwasher` Lave-vaisselle · `tv` Télévision · `server` Serveur · `router` Box internet · `zigbee` Zigbee, radio · `printer` Imprimante · `tablet` Tablette, écran · `solar` Panneau solaire · `shield` Alarme · `generic` Générique
+`bulb` Ampoule · `bulbrgb` Ampoule couleur · `lamp` Lampe · `ceiling` Plafonnier, applique · `string` Guirlande · `guinguette` Guinguette · `spot` Projecteur · `flood` Éclairage extérieur · `socket` Prise · `strip` Multiprise · `solar` Panneau solaire · `ev` Borne de recharge · `door` Porte · `window` Fenêtre, baie · `shutter` Volet · `garage` Porte de garage · `motion` Présence · `camera` Caméra · `shield` Alarme · `lock` Serrure · `doorbell` Sonnette · `fire` Poêle, cheminée · `radiator` Radiateur · `thermostat` Thermostat · `heatpump` Climatisation, PAC · `fan` Ventilateur · `purifier` Purificateur d'air · `mosquito` Anti-moustiques · `faucet` Robinet · `sprinkler` Arroseur · `valve` Vanne · `pool` Piscine · `dishwasher` Lave-vaisselle · `washer` Lave-linge · `fridge` Réfrigérateur · `oven` Four · `coffee` Machine à café · `vacuum` Aspirateur robot · `printer` Imprimante · `tv` Télévision · `speaker` Enceinte · `tablet` Tablette, écran · `server` Serveur · `router` Box internet · `zigbee` Zigbee, radio · `generic` Générique
 
 L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, serveurs, box et radios Zigbee restent animés tant qu'ils répondent.
 
@@ -261,12 +261,12 @@ L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, 
 npm install
 npm run build        # dist/plan-maison-card.js
 npm run watch        # reconstruction à chaque modification
-python3 -m http.server 8790 & npm test   # bancs d'essai Playwright : carte (test/index.html) et éditeur (test/editor.html)
+python3 -m http.server 8790 & npm test   # bancs d'essai Playwright : carte (test/index.html) et éditeur (test/editor.html) ; planches de revue : test/gallery.html (icônes) et test/furniture.html (mobilier)
 ```
 
 Le banc d'essai `test/index.html?cfg=simple` charge un exemple avec un faux objet `hass`, sans Home Assistant.
 
-Le code est découpé en modules dans `src/` : `geometry.js` (lecture de la config, murs, axes), `card.js` (la carte), `editor.js` (l'éditeur visuel), `icons.js`, `furniture.js`, `styles.js`, `yaml.js`.
+Le code est découpé en modules dans `src/` : `geometry.js` (lecture de la config, murs, axes), `card.js` (la carte), `editor.js` (l'éditeur visuel), `icons.js` (icônes animées), `furniture.js` (catalogue), `furnart.js` (dessin du mobilier), `styles.js`, `yaml.js`.
 
 ## Licence
 
