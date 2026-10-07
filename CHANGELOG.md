@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 1.10.1
+
+- Correction : un indicateur inhibé dans l'état général d'un appareil ne remonte plus du tout dans « À regarder » — ni comme indicateur de santé, ni via une règle d'alerte personnalisée (`alerts.rules`), ni via les alertes automatiques de pile faible ou de mise à jour, ni via le seuil `warn` de l'équipement.
+
 ## 1.10.0
 
 - Nouvelles icônes animées : NAS (baies de disques avec voyants d'activité), hyperviseur Proxmox (hôte et machines virtuelles empilées), machine virtuelle (fenêtre avec conteneur), sèche-serviettes (barreaux qui chauffent, serviette). 50 icônes au total.

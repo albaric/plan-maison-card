@@ -10,7 +10,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.10.0";
+export const VERSION = "1.10.1";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -690,7 +690,11 @@ class PlanMaisonCard extends HTMLElement {
   /* ---------- panneau latéral ---------- */
   _watch() {
     const S = this._hass.states, cfg = this._config.alerts || {}, out = [], ruled = new Set();
+    // entités inhibées dans l'état général d'un appareil : elles ne remontent plus nulle part dans « À regarder »
+    const muted = new Set();
+    this._devs().forEach((d) => { const h = this._hp(d); if (h) h.metrics.forEach((m) => m.ign && muted.add(m.eid)); });
     (cfg.rules || []).forEach((r) => {
+      if (muted.has(r.entity)) { ruled.add(r.entity); return; }
       const st = S[r.entity]; ruled.add(r.entity);
       const state = st ? st.state : "unavailable", v = this._num(r.entity);
       let hit = false;
@@ -704,21 +708,21 @@ class PlanMaisonCard extends HTMLElement {
         const st = S[d.entity];
         if (!st || NA.includes(st.state)) out.push(["na", this._nm(d) + " indisponible", "Ne répond plus."]);
         else if (d.entity.startsWith("binary_sensor.") && st.state === "on" && ["door", "window", "opening", "garage_door"].includes(st.attributes.device_class)) out.push(["warn", this._nm(d) + " ouverte", "Depuis " + new Date(st.last_changed).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "."]);
-        else if (this._stateOf(d).c === "warn" && !(d.warn && d.warn.entity && ruled.has(d.warn.entity))) out.push(["warn", this._nm(d), this._stateOf(d).t]);
+        else if (this._stateOf(d).c === "warn" && !(d.warn && d.warn.entity && ruled.has(d.warn.entity)) && !muted.has((d.warn && d.warn.entity) || d.entity)) out.push(["warn", this._nm(d), this._stateOf(d).t]);
       });
       // indicateurs de santé en alerte de chaque appareil placé (pile et mises à jour déjà couvertes plus bas ; entités déjà suivies par une règle ou par la pastille exclues)
       this._devs().filter((d) => d.pos).forEach((d) => {
         const st = S[d.entity], h = this._hp(d); if (!h || !st || NA.includes(st.state) || h.level === "na") return;
-        const bad = h.metrics.filter((m) => (m.level === "warn" || m.level === "bad") && !ruled.has(m.eid) && !(m.k === "battery" && cfg.battery !== false) && !(m.eid === d.entity && this._stateOf(d).c === "warn") && !(d.warn && d.warn.entity === m.eid));
+        const bad = h.metrics.filter((m) => !m.ign && (m.level === "warn" || m.level === "bad") && !ruled.has(m.eid) && !(m.k === "battery" && cfg.battery !== false) && !(m.eid === d.entity && this._stateOf(d).c === "warn") && !(d.warn && d.warn.entity === m.eid));
         if (bad.length) out.push([bad.some((m) => m.level === "bad") ? "na" : "warn", `${this._nm(d)} : ${bad[0].label.toLowerCase()} ${bad[0].text}`, bad.slice(1, 3).map((m) => `${m.label} ${m.text}`).join(" · ")]);
       });
     }
     const bat = cfg.battery === undefined ? 20 : cfg.battery;
     if (bat !== false) Object.values(S).forEach((st) => {
-      if (ruled.has(st.entity_id) || st.attributes.device_class !== "battery" || !st.entity_id.startsWith("sensor.")) return;
+      if (ruled.has(st.entity_id) || muted.has(st.entity_id) || st.attributes.device_class !== "battery" || !st.entity_id.startsWith("sensor.")) return;
       const v = parseFloat(st.state); if (!isNaN(v) && v < bat) out.push(["info", `Pile faible : ${st.attributes.friendly_name || st.entity_id} à ${Math.round(v)} %`, ""]);
     });
-    if (cfg.updates !== false) Object.values(S).forEach((st) => { if (st.entity_id.startsWith("update.") && st.state === "on" && !ruled.has(st.entity_id)) out.push(["info", "Mise à jour : " + (st.attributes.title || st.attributes.friendly_name || st.entity_id), st.attributes.latest_version ? "Version " + st.attributes.latest_version : ""]); });
+    if (cfg.updates !== false) Object.values(S).forEach((st) => { if (st.entity_id.startsWith("update.") && st.state === "on" && !ruled.has(st.entity_id) && !muted.has(st.entity_id)) out.push(["info", "Mise à jour : " + (st.attributes.title || st.attributes.friendly_name || st.entity_id), st.attributes.latest_version ? "Version " + st.attributes.latest_version : ""]); });
     const n = this._devs().filter((d) => !d.pos).length;
     if (n) out.push(["info", n + " équipement" + (n > 1 ? "s" : "") + " à placer", "Mode Équipements : glisse-les depuis la case « À placer »."]);
     const rank = { na: 0, warn: 1, info: 2 };

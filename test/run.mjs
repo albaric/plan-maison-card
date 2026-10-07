@@ -106,6 +106,11 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   await c.evaluate((el) => el._healthPop(el._devs().find((d) => d.id === "zigbee")));
   await c.evaluate((el) => el._pop.querySelector('.hig[data-i="binary_sensor.coordinateur_zigbee_ethernet"]').click()); await p.waitForTimeout(700);
   const after = await c.evaluate((el) => { const h = el._hp(el._devs().find((d) => d.id === "zigbee")); return { level: h.level, red: el._mk.zigbee.el.classList.contains("h-bad"), ign: !!el._pop.querySelector(".hm.ign"), saved: JSON.stringify(window.store).includes("coordinateur_zigbee_ethernet") }; });
+  const watchBefore = await c.evaluate((el) => [...el.shadowRoot.querySelectorAll("#panel .watch .t")].map((x) => x.textContent));
+  await c.evaluate((el) => el._healthPop(el._devs().find((d) => d.id === "zigbee")));
+  await c.evaluate((el) => el._pop.querySelector('.hig[data-i="sensor.coordinateur_zigbee_connexion"]').click()); await p.waitForTimeout(300);
+  const watchAfter = await c.evaluate((el) => [...el.shadowRoot.querySelectorAll("#panel .watch .t")].map((x) => x.textContent));
+  check("santé : indicateur inhibé retiré de « À regarder » (y compris sa règle d'alerte)", watchBefore.some((t) => /Wi-Fi/.test(t)) && !watchAfter.some((t) => /Wi-Fi|coordinateur|Coordinateur Zigbee :/.test(t)), JSON.stringify({ watchBefore, watchAfter }));
   const viaCfg = await c.evaluate(async (el) => { el._L.hIgn = {}; const cfg = JSON.parse(JSON.stringify(el._config)); cfg.devices.find((d) => d.id === "zigbee").health_ignore = ["binary_sensor.coordinateur_zigbee_ethernet"]; el.setConfig(cfg); await new Promise((r) => setTimeout(r, 300)); el._hc = {}; return el._hp(el._devs().find((d) => d.id === "zigbee")).level; });
   check("santé : Ethernet débranché remonte en rouge", before.level === "bad" && before.red, before);
   check("santé : Ethernet ignoré depuis la fiche (mémorisé)", after.level === "ok" && !after.red && after.ign && after.saved, JSON.stringify(after));

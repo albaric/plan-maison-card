@@ -257,7 +257,7 @@ Pour chaque équipement placé, la carte retrouve l'appareil Home Assistant auqu
 - Un anneau orange ou rouge entoure la pastille quand l'appareil demande de l'attention.
 - Toucher la pastille d'un équipement d'information (ou appui long sur une pastille qui s'allume et s'éteint) ouvre sa fiche santé : tous les indicateurs, les raisons de l'alerte, la fiche de chaque entité et un lien vers l'appareil dans Home Assistant.
 - Les indicateurs en alerte remontent dans « À regarder ».
-- Un indicateur sans importance dans ton cas (Ethernet débranché sur un appareil volontairement en Wi-Fi, par exemple) peut être ignoré : bouton « Ignorer » sur l'indicateur dans la fiche santé (mémorisé pour ton compte), ou case décochée dans l'éditeur (`health_ignore`, pour tout le monde). Il reste affiché en pointillés, sans effet sur l'état ni sur « À regarder ».
+- Un indicateur sans importance dans ton cas (Ethernet débranché sur un appareil volontairement en Wi-Fi, par exemple) peut être ignoré : bouton « Ignorer » sur l'indicateur dans la fiche santé (mémorisé pour ton compte), ou case décochée dans l'éditeur (`health_ignore`, pour tout le monde). Il reste affiché en pointillés, sans effet sur l'état et ne remonte plus dans « À regarder », même s'il est aussi visé par une règle d'alerte personnalisée.
 - `health: false` sur un équipement, ou la case correspondante dans l'éditeur, désactive ce suivi.
 
 ### Icônes animées

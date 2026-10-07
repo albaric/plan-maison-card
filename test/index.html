@@ -46,7 +46,7 @@ Object.assign(states, Object.fromEntries([
 const reg = (dev, ids, cat) => ids.map((e) => [e, { entity_id: e, device_id: dev, entity_category: cat || null }]);
 const entities = Object.fromEntries([
  ...reg('srv', ['sensor.serveur_memoire','sensor.serveur_processeur','sensor.serveur_disque','sensor.serveur_temperature_cpu','sensor.serveur_dernier_demarrage','binary_sensor.serveur_connectivite','update.serveur_fichiers'], 'diagnostic'),
- ...reg('slz', ['sensor.coordinateur_zigbee_temperature','sensor.coordinateur_zigbee_connexion']), ...reg('slz', ['binary_sensor.coordinateur_zigbee_ethernet','sensor.coordinateur_zigbee_wifi_rssi'], 'diagnostic'),
+ ...reg('slz', ['sensor.coordinateur_zigbee_temperature']), ...reg('slz', ['sensor.coordinateur_zigbee_connexion','binary_sensor.coordinateur_zigbee_ethernet','sensor.coordinateur_zigbee_wifi_rssi'], 'diagnostic'),
  ...reg('th', ['sensor.sejour_temperature','sensor.sejour_humidite']), ...reg('th', ['sensor.sejour_batterie','sensor.sejour_linkquality','sensor.sejour_last_seen'], 'diagnostic'),
 ]);
 const devices = { srv: { name: 'Serveur', manufacturer: 'Proxmox', model: 'VM Home Assistant', sw_version: '16.2' }, th: { name: 'Capteur séjour', manufacturer: 'Aqara', model: 'WSDCGQ11LM' }, slz: { name: 'SLZB-06', manufacturer: 'SMLIGHT', model: 'SLZB-06' } };
