@@ -10,7 +10,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.9.1";
+export const VERSION = "1.10.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -671,7 +671,7 @@ class PlanMaisonCard extends HTMLElement {
     if (d.ik === "garage") on = on || ["open", "opening"].includes(S);
     if (d.ik === "ev") on = on || ["charging", "on"].includes(S) || parseFloat(S) > 0;
     if (d.ik === "washer" || d.ik === "dishwasher" || d.ik === "coffee" || d.ik === "oven") on = on || ["running", "on", "heating", "washing", "drying"].includes(String(S).toLowerCase());
-    if (d.ik === "thermostat" || d.ik === "radiator" || d.ik === "fire") on = on || (st && ["heating", "heat"].includes(st.attributes.hvac_action || S));
+    if (d.ik === "thermostat" || d.ik === "radiator" || d.ik === "towel" || d.ik === "fire") on = on || (st && ["heating", "heat"].includes(st.attributes.hvac_action || S));
     m.classList.toggle("act", !!on);
   }
   _states() {

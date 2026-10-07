@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 1.10.0
+
+- Nouvelles icônes animées : NAS (baies de disques avec voyants d'activité), hyperviseur Proxmox (hôte et machines virtuelles empilées), machine virtuelle (fenêtre avec conteneur), sèche-serviettes (barreaux qui chauffent, serviette). 50 icônes au total.
+- Choix automatique : « NAS », Synology, QNAP, TrueNAS, Unraid → NAS ; Proxmox, PVE, ESXi, hyperviseur → hyperviseur ; VM, LXC, conteneur, Docker → machine virtuelle ; sèche-serviettes → sèche-serviettes ; « serveur » → serveur.
+- NAS, hyperviseur et machine virtuelle restent animés tant qu'ils répondent, comme le serveur ; le sèche-serviettes chauffe quand il est allumé.
+
 ## 1.9.1
 
 - État général : on peut ignorer un indicateur précis (par exemple l'Ethernet d'un coordinateur Zigbee volontairement connecté en Wi-Fi). Bouton « Ignorer » / « Suivre » sur chaque indicateur de la fiche santé (mémorisé pour l'utilisateur), ou cases à cocher par indicateur dans l'éditeur (`health_ignore` dans la config). L'indicateur reste affiché en pointillés, sans effet sur l'état, l'anneau de la pastille ni « À regarder ». « Les intégrer ici » reporte dans la config les indicateurs ignorés sur la carte.
