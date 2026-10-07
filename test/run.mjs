@@ -118,6 +118,26 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   check("santé ignorée : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // « À regarder » : masquer une alerte (✕), réafficher ; lien coupé mais autre lien actif = pas une panne
+  const { p, errs, c } = await open("complete");
+  const titles = (el) => [...el.shadowRoot.querySelectorAll("#panel .watch li .t")].map((x) => x.textContent);
+  const t0 = await c.evaluate(titles);
+  await c.evaluate((el) => { const li = [...el.shadowRoot.querySelectorAll("#panel .watch li")].find((l) => /Porte d'entrée/.test(l.textContent)); li.querySelector(".wx").click(); }); await p.waitForTimeout(700);
+  const t1 = await c.evaluate((el) => ({ t: [...el.shadowRoot.querySelectorAll("#panel .watch li .t")].map((x) => x.textContent), muted: (el.shadowRoot.querySelector("#panel .wmuted") || {}).textContent || "", saved: JSON.stringify(window.store).includes("wMute") }));
+  await c.evaluate((el) => el.shadowRoot.querySelector("#wshow").click()); await p.waitForTimeout(200);
+  const t2 = await c.evaluate(titles);
+  const link = await c.evaluate(async (el) => {
+    const h = el._hass; h.states["binary_sensor.coordinateur_zigbee_internet"] = { entity_id: "binary_sensor.coordinateur_zigbee_internet", state: "on", attributes: { device_class: "connectivity", friendly_name: "SLZB-06 Internet" } };
+    h.entities = Object.assign({}, h.entities, { "binary_sensor.coordinateur_zigbee_internet": { entity_id: "binary_sensor.coordinateur_zigbee_internet", device_id: "slz", entity_category: "diagnostic" } });
+    el.hass = Object.assign({}, h); await new Promise((r) => setTimeout(r, 500));
+    const hp = el._hp(el._devs().find((d) => d.id === "zigbee")); return { level: hp.level, eth: hp.metrics.find((m) => m.eid.endsWith("_ethernet")).text };
+  });
+  check("« À regarder » : alerte masquée avec ✕ (mémorisé)", t0.some((x) => /Porte d'entrée/.test(x)) && !t1.t.some((x) => /Porte d'entrée/.test(x)) && /1 alerte masquée/.test(t1.muted) && t1.saved, JSON.stringify(t1));
+  check("« À regarder » : alertes masquées réaffichées", t2.some((x) => /Porte d'entrée/.test(x)), t2);
+  check("santé : Ethernet débranché mais Internet actif = « Non utilisé »", link.level === "ok" && link.eth === "Non utilisé", link);
+  check("masquage : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

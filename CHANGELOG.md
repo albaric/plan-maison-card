@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.10.2
+
+- « À regarder » : chaque alerte a un bouton ✕ pour la masquer (mémorisé pour l'utilisateur). Pour un indicateur de santé, il est ignoré comme depuis la fiche (réactivable par « Suivre ») ; pour les autres alertes, un lien « Réafficher » en bas de la liste les fait revenir.
+- État général plus juste :
+  - un lien réseau coupé n'est plus une panne quand un autre lien du même appareil est actif (Ethernet débranché d'un SLZB connecté en Wi-Fi : « Non utilisé ») ;
+  - les températures de puces et de processeurs ne sont signalées qu'à partir de 82 °C (problème à 92 °C), 60 à 80 °C étant normal pour ces appareils.
+
 ## 1.10.1
 
 - Correction : un indicateur inhibé dans l'état général d'un appareil ne remonte plus du tout dans « À regarder » — ni comme indicateur de santé, ni via une règle d'alerte personnalisée (`alerts.rules`), ni via les alertes automatiques de pile faible ou de mise à jour, ni via le seuil `warn` de l'équipement.

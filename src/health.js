@@ -82,7 +82,7 @@ export function deviceHealth(hass, eid, ignore) {
       case "mem": m.pct = v; m.level = lvl(v, 90, 97); m.text = fr(v) + " %"; break;
       case "disk": m.pct = v; m.level = lvl(v, 85, 95); m.text = fr(v) + " %"; break;
       case "battery": m.pct = v; m.level = lvl(v, 20, 10, true); m.text = fr(v) + " %"; break;
-      case "temp": m.level = lvl(v, 70, 85); m.text = fr(v, 1) + " " + u; break;
+      case "temp": m.level = lvl(v, 82, 92); m.text = fr(v, 1) + " " + u; break; // puces et processeurs : 60-80 °C reste normal
       case "signal": m.level = u === "%" ? lvl(v, 40, 20, true) : lvl(v, -80, -90, true); m.text = fr(v) + " " + u; m.pct = u === "%" ? v : Math.max(0, Math.min(100, (v + 100) * 2)); break;
       case "lqi": m.level = lvl(v, 50, 20, true); m.text = fr(v); m.pct = Math.min(100, (v / 255) * 100); break;
       case "load": m.text = fr(v, 2); break;
@@ -97,6 +97,8 @@ export function deviceHealth(hass, eid, ignore) {
     metrics.push(m);
   }
   if (!metrics.length) return null;
+  // appareil à plusieurs liens (Ethernet + Wi-Fi/Internet…) : un lien coupé n'est pas une panne si un autre est actif
+  if (metrics.some((m) => m.k === "conn" && m.text === "Connecté")) metrics.forEach((m) => { if (m.k === "conn" && m.level === "bad") { m.level = "ok"; m.text = "Non utilisé"; } });
   metrics.sort((x, y) => ORDER.indexOf(x.k) - ORDER.indexOf(y.k));
   const main = hass.states[eid], mainOff = !main || NA.includes(main.state);
   metrics.forEach((m) => (m.ign = ign.has(m.eid))); // indicateurs ignorés : affichés, mais sans effet sur l'état

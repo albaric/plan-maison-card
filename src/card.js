@@ -10,13 +10,13 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.10.1";
+export const VERSION = "1.10.2";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
 const NA = ["unavailable", "unknown"];
 const KIND = { toggle: "t", info: "i", value: "l", widget: "w", t: "t", i: "i", l: "l", w: "w" };
-const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.lights.hl .cable{stroke:var(--sel);stroke-width:.5}.zart{pointer-events:none}.zone:hover .zart{opacity:.85}.zone.sel .zart{opacity:.6}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
+const EXTRA_CSS = `.zone .patch{fill:var(--deck);stroke:var(--deck-line);stroke-width:.4}.zone .pool{fill:#9fd6ef;stroke:#5ba7cc;stroke-width:.6}:host(.dark) .zone .pool{fill:#2f5f78;stroke:#4f8fae}.watch li{position:relative}.watch .wx{position:absolute;right:0;top:6px;font:inherit;font-size:12px;width:22px;height:22px;border-radius:50%;border:1px solid transparent;background:none;color:var(--ink-2);cursor:pointer;opacity:0;transition:opacity .15s}.watch li:hover .wx{opacity:1}@media (hover:none){.watch .wx{opacity:.7}}.watch .wx:hover{border-color:var(--line);color:var(--na)}.watch li .t{padding-right:20px}.watch .wmuted{font-size:12px;color:var(--ink-2);grid-template-columns:4px minmax(0,1fr)}.lnk{font:inherit;background:none;border:0;padding:0;color:var(--sel);cursor:pointer;text-decoration:underline}.lights.hl .cable{stroke:var(--sel);stroke-width:.5}.zart{pointer-events:none}.zone:hover .zart{opacity:.85}.zone.sel .zart{opacity:.6}.zone .gravel{fill:#e6e0d4;stroke:#c9bfae;stroke-width:.4}:host(.dark) .zone .gravel{fill:#3a372f;stroke:#57524a}.zone:hover .patch,.zone:hover .pool,.zone:hover .gravel{fill:var(--hover)}.zone.sel .patch,.zone.sel .pool,.zone.sel .gravel{fill:var(--sel-soft)}
 .err{padding:16px;color:var(--na);font-family:var(--f-mono);font-size:13px;white-space:pre-wrap}.exp textarea{width:100%;min-height:260px;font-family:var(--f-mono);font-size:11.5px;color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:8px;resize:vertical}.pop.xl{width:min(620px,calc(100% - 16px))}.main{grid-template-columns:minmax(0,1fr) var(--pw,clamp(240px,22%,300px));position:relative}.main.nopanel{grid-template-columns:minmax(0,1fr)}.pres{position:absolute;top:0;bottom:0;right:calc(var(--pw,clamp(240px,22%,300px)) + 2px);width:12px;cursor:col-resize;z-index:3;touch-action:none}.pres::after{content:"";position:absolute;left:5px;top:40%;height:56px;width:3px;border-radius:2px;background:var(--line);transition:background .15s}.pres:hover::after,.pres.drag::after{background:var(--sel)}.main.nopanel .pres{display:none}@container (max-width:860px){.main{grid-template-columns:minmax(0,1fr)!important}.pres{display:none}}.flwrap{max-height:min(60vh,520px);overflow:auto;display:flex;flex-direction:column;gap:6px}.readings .rd:last-child:nth-child(odd){grid-column:1/-1}.pop .sheet{display:flex;flex-direction:column;gap:9px;max-height:min(62vh,440px);overflow:auto;font-size:13.5px}.pop .sheet h2{font-size:19px}.tb-r{display:inline-flex;gap:6px;align-items:center}`;
 
 const slug = (s) => String(s || "plan").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -693,6 +693,7 @@ class PlanMaisonCard extends HTMLElement {
     // entités inhibées dans l'état général d'un appareil : elles ne remontent plus nulle part dans « À regarder »
     const muted = new Set();
     this._devs().forEach((d) => { const h = this._hp(d); if (h) h.metrics.forEach((m) => m.ign && muted.add(m.eid)); });
+    Object.keys((this._L && this._L.wMute) || {}).forEach((e) => muted.add(e)); // alertes masquées depuis « À regarder »
     (cfg.rules || []).forEach((r) => {
       if (muted.has(r.entity)) { ruled.add(r.entity); return; }
       const st = S[r.entity]; ruled.add(r.entity);
@@ -701,28 +702,28 @@ class PlanMaisonCard extends HTMLElement {
       if (r.state != null) hit = [].concat(r.state).map(String).includes(state);
       else if (r.not != null) hit = ![].concat(r.not).map(String).includes(state);
       else if (r.above != null || r.below != null) hit = v != null && ((r.above != null && v > r.above) || (r.below != null && v < r.below));
-      if (hit) { const ctx = { entity: r.entity, name: st ? st.attributes.friendly_name : r.entity }; out.push([r.level || "warn", this._tpl(r.title || "{name} : {state}", ctx), this._tpl(r.text || "", ctx)]); }
+      if (hit) { const ctx = { entity: r.entity, name: st ? st.attributes.friendly_name : r.entity }; out.push([r.level || "warn", this._tpl(r.title || "{name} : {state}", ctx), this._tpl(r.text || "", ctx), { e: [r.entity] }]); }
     });
     if (cfg.auto !== false) {
       this._devs().filter((d) => d.pos && !ruled.has(d.entity)).forEach((d) => {
-        const st = S[d.entity];
-        if (!st || NA.includes(st.state)) out.push(["na", this._nm(d) + " indisponible", "Ne répond plus."]);
-        else if (d.entity.startsWith("binary_sensor.") && st.state === "on" && ["door", "window", "opening", "garage_door"].includes(st.attributes.device_class)) out.push(["warn", this._nm(d) + " ouverte", "Depuis " + new Date(st.last_changed).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "."]);
-        else if (this._stateOf(d).c === "warn" && !(d.warn && d.warn.entity && ruled.has(d.warn.entity)) && !muted.has((d.warn && d.warn.entity) || d.entity)) out.push(["warn", this._nm(d), this._stateOf(d).t]);
+        const st = S[d.entity]; if (muted.has(d.entity)) return;
+        if (!st || NA.includes(st.state)) out.push(["na", this._nm(d) + " indisponible", "Ne répond plus.", { e: [d.entity] }]);
+        else if (d.entity.startsWith("binary_sensor.") && st.state === "on" && ["door", "window", "opening", "garage_door"].includes(st.attributes.device_class)) out.push(["warn", this._nm(d) + " ouverte", "Depuis " + new Date(st.last_changed).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + ".", { e: [d.entity] }]);
+        else if (this._stateOf(d).c === "warn" && !(d.warn && d.warn.entity && ruled.has(d.warn.entity)) && !muted.has((d.warn && d.warn.entity) || d.entity)) out.push(["warn", this._nm(d), this._stateOf(d).t, { e: [(d.warn && d.warn.entity) || d.entity] }]);
       });
       // indicateurs de santé en alerte de chaque appareil placé (pile et mises à jour déjà couvertes plus bas ; entités déjà suivies par une règle ou par la pastille exclues)
       this._devs().filter((d) => d.pos).forEach((d) => {
         const st = S[d.entity], h = this._hp(d); if (!h || !st || NA.includes(st.state) || h.level === "na") return;
         const bad = h.metrics.filter((m) => !m.ign && (m.level === "warn" || m.level === "bad") && !ruled.has(m.eid) && !(m.k === "battery" && cfg.battery !== false) && !(m.eid === d.entity && this._stateOf(d).c === "warn") && !(d.warn && d.warn.entity === m.eid));
-        if (bad.length) out.push([bad.some((m) => m.level === "bad") ? "na" : "warn", `${this._nm(d)} : ${bad[0].label.toLowerCase()} ${bad[0].text}`, bad.slice(1, 3).map((m) => `${m.label} ${m.text}`).join(" · ")]);
+        if (bad.length) out.push([bad.some((m) => m.level === "bad") ? "na" : "warn", `${this._nm(d)} : ${bad[0].label.toLowerCase()} ${bad[0].text}`, bad.slice(1, 3).map((m) => `${m.label} ${m.text}`).join(" · "), { e: bad.map((m) => m.eid), h: 1 }]);
       });
     }
     const bat = cfg.battery === undefined ? 20 : cfg.battery;
     if (bat !== false) Object.values(S).forEach((st) => {
       if (ruled.has(st.entity_id) || muted.has(st.entity_id) || st.attributes.device_class !== "battery" || !st.entity_id.startsWith("sensor.")) return;
-      const v = parseFloat(st.state); if (!isNaN(v) && v < bat) out.push(["info", `Pile faible : ${st.attributes.friendly_name || st.entity_id} à ${Math.round(v)} %`, ""]);
+      const v = parseFloat(st.state); if (!isNaN(v) && v < bat) out.push(["info", `Pile faible : ${st.attributes.friendly_name || st.entity_id} à ${Math.round(v)} %`, "", { e: [st.entity_id] }]);
     });
-    if (cfg.updates !== false) Object.values(S).forEach((st) => { if (st.entity_id.startsWith("update.") && st.state === "on" && !ruled.has(st.entity_id) && !muted.has(st.entity_id)) out.push(["info", "Mise à jour : " + (st.attributes.title || st.attributes.friendly_name || st.entity_id), st.attributes.latest_version ? "Version " + st.attributes.latest_version : ""]); });
+    if (cfg.updates !== false) Object.values(S).forEach((st) => { if (st.entity_id.startsWith("update.") && st.state === "on" && !ruled.has(st.entity_id) && !muted.has(st.entity_id)) out.push(["info", "Mise à jour : " + (st.attributes.title || st.attributes.friendly_name || st.entity_id), st.attributes.latest_version ? "Version " + st.attributes.latest_version : "", { e: [st.entity_id] }]); });
     const n = this._devs().filter((d) => !d.pos).length;
     if (n) out.push(["info", n + " équipement" + (n > 1 ? "s" : "") + " à placer", "Mode Équipements : glisse-les depuis la case « À placer »."]);
     const rank = { na: 0, warn: 1, info: 2 };
@@ -747,6 +748,15 @@ class PlanMaisonCard extends HTMLElement {
     p.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => { this._focus = b.dataset.go; this._build(); this._panel(); }));
     const back = p.querySelector("#back"); if (back) back.onclick = () => { this._focus = null; this._build(); this._panel(); };
   }
+  _wireWatch(p, w) {
+    p.querySelectorAll(".wx").forEach((b) => (b.onclick = () => {
+      const x = w[+b.dataset.w] && w[+b.dataset.w][3]; if (!x) return;
+      if (x.h) { this._L.hIgn = this._L.hIgn || {}; x.e.forEach((e) => (this._L.hIgn[e] = true)); } // indicateur de santé : ignoré (réactivable dans la fiche)
+      else { this._L.wMute = this._L.wMute || {}; x.e.forEach((e) => (this._L.wMute[e] = true)); }
+      this._save(); this._hc = {}; this._states(); this._panel();
+    }));
+    const sh = p.querySelector("#wshow"); if (sh) sh.onclick = () => { this._L.wMute = {}; this._save(); this._panel(); };
+  }
   _spots() { const o = {}; this._model.zones.forEach((z) => (o[z.id] = z.name)); if (this._model.garden) o.jardin = this._model.garden.label || "Jardin"; return o; }
   _panel() {
     const p = this.$("panel"); if (!p || !this._P) return;
@@ -770,12 +780,13 @@ class PlanMaisonCard extends HTMLElement {
       } else head = `<div class="eyebrow">Extérieur</div><h2>${esc(spots[f] || f)}</h2>`;
       p.innerHTML = `<button class="btn" id="back" style="align-self:flex-start">← Vue d'ensemble</button><div>${head}</div>${extra}<h3>Équipements</h3>${this._devList(devs)}`;
     } else {
-      const w = this._watch(), all = this._devs(), cnt = (id) => this._devsAt(id).length;
-      p.innerHTML = `<h3>À regarder</h3><ul class="watch">${w.length ? w.map(([c, t, d]) => `<li><span class="bar ${c}"></span><div><div class="t">${esc(t)}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div></li>`).join("") : '<li><span class="bar ok"></span><div><div class="t">Rien à signaler</div></div></li>'}</ul>
+      const w = (this._w = this._watch()), all = this._devs(), cnt = (id) => this._devsAt(id).length;
+      p.innerHTML = `<h3>À regarder</h3><ul class="watch">${w.length ? w.map(([c, t, d, x], i) => `<li><span class="bar ${c}"></span><div><div class="t">${esc(t)}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div>${x && x.e ? `<button class="wx" data-w="${i}" title="Masquer cette alerte (ne plus la signaler)">✕</button>` : ""}</li>`).join("") : '<li><span class="bar ok"></span><div><div class="t">Rien à signaler</div></div></li>'}${Object.keys(this._L.wMute || {}).length ? `<li class="wmuted"><span></span><div>${Object.keys(this._L.wMute).length} alerte${Object.keys(this._L.wMute).length > 1 ? "s masquées" : " masquée"} · <button class="lnk" id="wshow">Réafficher</button></div></li>` : ""}</ul>
         ${this._config.panel_rooms ? `<h3>Pièces et extérieur</h3><div class="rooms">${rooms.map((r) => `<button class="rl" data-go="${esc(r.id)}"><span>${esc(this._rname(r))}</span><span class="c">${cnt(r.id) || "–"}</span></button>`).join("")}
         ${Object.keys(spots).map((k) => `<button class="rl" data-go="${esc(k)}"><span>${esc(spots[k])}</span><span class="c">${cnt(k) || "–"}</span></button>`).join("")}</div>` : ""}`;
     }
     this._wire(p);
+    if (!f && this._w) this._wireWatch(p, this._w);
     if (!this._inSheet) { this._inSheet = true; try { this._sheet(null); } finally { this._inSheet = false; } }
   }
 
