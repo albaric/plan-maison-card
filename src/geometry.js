@@ -113,7 +113,7 @@ export function buildModel(cfg) {
     const pos = d.x != null && d.y != null ? [num(d.x) * M, num(d.y) * M] : null;
     return {
       id: String(d.id || d.entity), entity: d.entity, name: d.name || null, icon: d.icon || null, pos, kind: d.kind || null,
-      warn: d.warn || null, gust: d.gust || null, intensity: d.intensity || null, outdoor: d.outdoor,
+      warn: d.warn || null, gust: d.gust || null, intensity: d.intensity || null, outdoor: d.outdoor, health: d.health,
     };
   });
 

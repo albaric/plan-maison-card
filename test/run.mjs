@@ -85,6 +85,20 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   check("vue d'ensemble : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // état général d'un appareil (registre HA) : fiche santé, anneau d'alerte, « À regarder », désactivable
+  const { p, errs, c } = await open("complete");
+  const r = await c.evaluate((el) => ({ ring: el._mk.serveur.el.classList.contains("h-warn") || el._mk.serveur.el.classList.contains("h-bad"), watch: [...el.shadowRoot.querySelectorAll("#panel .watch .t")].map((x) => x.textContent) }));
+  const m = await c.evaluate((el) => { const b = el._mk.serveur.el.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; });
+  await p.mouse.click(m[0], m[1]); await p.waitForTimeout(300);
+  const sheet = await c.evaluate((el) => ({ open: !el._pop.hidden && !!el._pop.querySelector(".hsheet"), metrics: [...el._pop.querySelectorAll(".hm .k")].map((x) => x.textContent), status: (el._pop.querySelector(".hst") || {}).textContent }));
+  const off = await c.evaluate(async (el) => { const cfg = JSON.parse(JSON.stringify(el._config)); cfg.devices.find((d) => d.id === "serveur").health = false; el.setConfig(cfg); await new Promise((r) => setTimeout(r, 300)); return { ring: el._mk.serveur.el.classList.contains("h-warn"), hp: el._hp(el._devs().find((d) => d.id === "serveur")) }; });
+  check("santé : anneau d'alerte sur la pastille du serveur", r.ring, r);
+  check("santé : indicateur du serveur dans « À regarder »", r.watch.some((t) => /disque/i.test(t)), r.watch);
+  check("santé : fiche avec processeur, mémoire, disque", sheet.open && ["Processeur", "Mémoire", "Disque /"].every((k) => sheet.metrics.includes(k)) && sheet.status === "À surveiller", sheet);
+  check("santé : désactivable (health: false)", !off.ring && off.hp === null, off);
+  check("santé : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

@@ -6,6 +6,7 @@ import { BASE_CSS, ICON_CSS } from "./styles.js";
 import { furnSvg, FURN_DEFS, furnLibHtml, furnSwatches, zoneArt } from "./furnart.js";
 import * as G from "./geometry.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, friendly } from "./picker.js";
+import { deviceHealth } from "./health.js";
 
 const M = 10;
 const NS = "http://www.w3.org/2000/svg";
@@ -801,12 +802,14 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (!d) return;
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`, ik = this._devIcon(d);
     box.innerHTML = `<h4>Équipement</h4><div class="f2"><div class="fld">Appareil<span id="en"></span></div>${field("Nom affiché", `<input id="nm" value="${esc(d.raw.name || "")}" placeholder="${esc(this._devName(d))}">`)}${field("Au clic", `<select id="kd">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select>`)}</div>
+      ${(() => { const h = deviceHealth(this._hass, d.entity); return `<div class="props" style="padding:8px 10px"><label class="chk2"><input type="checkbox" id="hl" ${d.raw.health === false ? "" : "checked"}> État général de l'appareil</label><p class="muted" style="margin:4px 0 0">${h ? `Appareil « ${esc(h.device.name || "?")} » : ${h.metrics.length} indicateur${h.metrics.length > 1 ? "s" : ""} (${esc(h.metrics.slice(0, 6).map((m) => m.label).join(", "))}${h.metrics.length > 6 ? "…" : ""}). Toucher la pastille ouvre sa fiche santé ; un anneau orange ou rouge signale un problème.` : "Aucun indicateur trouvé : l'entité n'est rattachée à aucun appareil Home Assistant ou celui-ci n'a pas d'entité de diagnostic."}</p></div>`; })()}
       <div class="s">Icône animée${d.raw.icon ? "" : " (choisie automatiquement)"} :</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${ik === k ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>
       <div class="btns">${d.raw.icon ? '<button class="btn" id="auto">Icône automatique</button>' : ""}<button class="btn" id="unplace">Retirer du plan</button><button class="btn danger" id="del">Supprimer l'équipement</button></div>`;
     const S = this._S;
     this._picker(box.querySelector("#en"), d.entity, (v) => this._setEntity(d, v), { domains: DEVICE_DOMAINS });
     box.querySelector("#nm").onchange = (e) => this._change(() => (d.raw.name = e.target.value.trim() || undefined));
     box.querySelector("#kd").onchange = (e) => this._change(() => (d.raw.kind = e.target.value || undefined));
+    const hb = box.querySelector("#hl"); if (hb) hb.onchange = (e) => this._change(() => { if (e.target.checked) delete d.raw.health; else d.raw.health = false; });
     box.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._change(() => (d.raw.icon = b.dataset.k))));
     const au = box.querySelector("#auto"); if (au) au.onclick = () => this._change(() => delete d.raw.icon);
     box.querySelector("#unplace").onclick = () => this._change(() => { d.pos = null; this._sel = null; });

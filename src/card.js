@@ -4,12 +4,13 @@ import { CAT, FSTYLE, META, furnParts } from "./furniture.js";
 import { furnSvg, FURN_DEFS, furnLibHtml, furnSwatches, zoneArt } from "./furnart.js";
 import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG } from "./styles.js";
 import * as G from "./geometry.js";
+import { deviceHealth, HEALTH_CSS } from "./health.js";
 import { toYaml } from "./yaml.js";
 import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.8.2";
+export const VERSION = "1.9.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -67,7 +68,7 @@ class PlanMaisonCard extends HTMLElement {
   }
 
   set hass(h) {
-    const first = !this._hass; this._hass = h;
+    const first = !this._hass; this._hass = h; this._hc = {};
     if (first) { this._setup(); this._load(); return; }
     this._theme();
     if (this._built) { this._states(); this._meteo(); this._live(); if (!this._dragging) this._panelSoon(); }
@@ -102,7 +103,7 @@ class PlanMaisonCard extends HTMLElement {
     this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} };
     this._AX = Object.assign({}, this._defAX); this._geo();
     const r = this.attachShadow({ mode: "open" });
-    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}</style><ha-card><div class="wrap">
+    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}${HEALTH_CSS}</style><ha-card><div class="wrap">
       <header><h1 id="title"></h1><div class="live" id="live"><i></i><span></span></div></header>
       <section class="meteo" id="meteo"></section>
       <div class="main">
@@ -575,7 +576,7 @@ class PlanMaisonCard extends HTMLElement {
     m.addEventListener("pointerdown", (e) => {
       e.preventDefault(); e.stopPropagation(); start = this._pt(e); moved = false; longDone = false;
       try { m.setPointerCapture(e.pointerId); } catch (x) {}
-      if (this._mode === "view") lp = setTimeout(() => { longDone = true; this._more(d.entity); }, 550); else this._dragging = true;
+      if (this._mode === "view") lp = setTimeout(() => { longDone = true; if (this._hp(d)) this._healthPop(d); else this._more(d.entity); }, 550); else this._dragging = true;
     });
     m.addEventListener("pointermove", (e) => {
       if (!start || this._mode !== "dev") return;
@@ -594,7 +595,29 @@ class PlanMaisonCard extends HTMLElement {
   _tap(d) {
     const dom = d.entity.split(".")[0], st = this._hass.states[d.entity];
     if (d.kind === "t" && TOGGLE.includes(dom) && st && !NA.includes(st.state)) this._hass.callService(dom, "toggle", { entity_id: d.entity });
+    else if (this._hp(d)) this._healthPop(d);
     else this._more(d.entity);
+  }
+  /** Bilan de santé de l'appareil HA auquel appartient l'équipement (mis en cache le temps d'un rafraîchissement). */
+  _hp(d) {
+    if (!d || d.garland || d.health === false || !this._hass) return null;
+    this._hc = this._hc || {};
+    if (!(d.entity in this._hc)) this._hc[d.entity] = deviceHealth(this._hass, d.entity);
+    return this._hc[d.entity];
+  }
+  _healthPop(d) {
+    const h = this._hp(d); if (!h) return this._more(d.entity);
+    const pop = this._pop; pop.classList.remove("xl"); pop.classList.add("wide");
+    const card = (m) => `<div class="hm ${m.level}" data-e="${esc(m.eid)}" title="${esc(m.eid)}"><div class="k">${esc(m.label)}</div><div class="v">${esc(m.text)}</div>${m.pct != null ? `<div class="bar"><i style="width:${Math.max(2, Math.min(100, m.pct))}%"></i></div>` : ""}</div>`;
+    pop.innerHTML = `<div class="hsheet"><div class="hhead"><div><div class="t">${esc(this._nm(d))}</div><div class="s">${esc([h.device.name !== this._nm(d) ? h.device.name : "", h.device.model, h.device.sw && "version " + h.device.sw].filter(Boolean).join(" · "))}</div></div><span class="hst ${h.level}">${esc(h.label)}</span></div>
+      ${h.reasons.length ? `<ul class="hwhy">${h.reasons.slice(0, 5).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+      <div class="hgrid">${h.metrics.slice(0, 12).map(card).join("")}</div>
+      <div class="row"><button class="btn" id="pm-more">Fiche</button><button class="btn" id="pm-dev">Appareil dans Home Assistant</button><button class="btn" id="pm-x">Fermer</button></div></div>`;
+    pop.querySelectorAll(".hm").forEach((b) => (b.onclick = () => this._more(b.dataset.e)));
+    pop.querySelector("#pm-more").onclick = () => this._more(d.entity);
+    pop.querySelector("#pm-dev").onclick = () => { history.pushState(null, "", "/config/devices/device/" + h.device.id); window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } })); };
+    pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; };
+    const mk = this._mk && this._mk[d.id]; if (mk) this._placePop(mk.el); else { pop.hidden = false; pop.style.left = "8px"; pop.style.top = "8px"; }
   }
   _more(e) { this.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: e }, bubbles: true, composed: true })); }
   _nm(d) { if (d.name) return d.name; const s = this._hass.states[d.entity]; return (s && s.attributes.friendly_name) || d.entity; }
@@ -645,7 +668,9 @@ class PlanMaisonCard extends HTMLElement {
       const s = this._stateOf(d);
       el.classList.toggle("na", s.c === "na"); el.classList.toggle("on", s.c === "on"); el.classList.toggle("warn", s.c === "warn");
       if (d.kind === "w") this._wgUpd(el, d); else if (d.kind === "l") el.textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); else { this._act(el, d, s); if (d.val) el.querySelector(".vb").textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); }
-      el.title = `${this._nm(d)} : ${s.t}`;
+      const h = this._hp(d), hl = h && s.c !== "na" ? h.level : "";
+      el.classList.toggle("h-warn", hl === "warn"); el.classList.toggle("h-bad", hl === "bad");
+      el.title = `${this._nm(d)} : ${s.t}` + (h ? `\nÉtat général : ${h.label}${h.reasons.length ? "\n" + h.reasons.slice(0, 4).join("\n") : ""}\n(appui long : fiche santé)` : "");
     });
     if (this._lg) Object.entries(this._lg).forEach(([e, gs]) => gs.forEach((g) => g.classList.toggle("lit", (this._hass.states[e] || {}).state === "on")));
   }
@@ -668,6 +693,12 @@ class PlanMaisonCard extends HTMLElement {
         if (!st || NA.includes(st.state)) out.push(["na", this._nm(d) + " indisponible", "Ne répond plus."]);
         else if (d.entity.startsWith("binary_sensor.") && st.state === "on" && ["door", "window", "opening", "garage_door"].includes(st.attributes.device_class)) out.push(["warn", this._nm(d) + " ouverte", "Depuis " + new Date(st.last_changed).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "."]);
         else if (this._stateOf(d).c === "warn" && !(d.warn && d.warn.entity && ruled.has(d.warn.entity))) out.push(["warn", this._nm(d), this._stateOf(d).t]);
+      });
+      // indicateurs de santé en alerte de chaque appareil placé (pile et mises à jour déjà couvertes plus bas ; entités déjà suivies par une règle ou par la pastille exclues)
+      this._devs().filter((d) => d.pos).forEach((d) => {
+        const st = S[d.entity], h = this._hp(d); if (!h || !st || NA.includes(st.state) || h.level === "na") return;
+        const bad = h.metrics.filter((m) => (m.level === "warn" || m.level === "bad") && !ruled.has(m.eid) && !(m.k === "battery" && cfg.battery !== false) && !(m.eid === d.entity && this._stateOf(d).c === "warn") && !(d.warn && d.warn.entity === m.eid));
+        if (bad.length) out.push([bad.some((m) => m.level === "bad") ? "na" : "warn", `${this._nm(d)} : ${bad[0].label.toLowerCase()} ${bad[0].text}`, bad.slice(1, 3).map((m) => `${m.label} ${m.text}`).join(" · ")]);
       });
     }
     const bat = cfg.battery === undefined ? 20 : cfg.battery;
@@ -694,7 +725,7 @@ class PlanMaisonCard extends HTMLElement {
       const d = all.find((x) => x.id === li.dataset.id); if (!d) return;
       li.onmouseenter = () => hl(d, true);
       li.onmouseleave = () => hl(d, false);
-      li.onclick = (e) => { if (!e.target.closest(".tgl")) this._more(d.entity); };
+      li.onclick = (e) => { if (e.target.closest(".tgl")) return; if (this._hp(d)) this._healthPop(d); else this._more(d.entity); };
     });
     p.querySelectorAll(".tgl").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const d = all.find((x) => x.id === b.dataset.t); if (d) this._tap(d); }));
     p.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => { this._focus = b.dataset.go; this._build(); this._panel(); }));

@@ -31,8 +31,25 @@ const states = Object.fromEntries([
  S('light.salon','on'), S('switch.prise_cuisine','off'), S('light.guirlande_terrasse','on'), S('sensor.exterieur_temperature','24.5',{unit_of_measurement:'°C',device_class:'temperature'}), S('sensor.exterieur_humidity','58',{unit_of_measurement:'%',device_class:'humidity'}), S('binary_sensor.porte_entree','off',{device_class:'door'}),
  S('sensor.telecommande_battery','12',{unit_of_measurement:'%',device_class:'battery',friendly_name:'Télécommande'}), S('update.home_assistant_core_update','on',{title:'Home Assistant Core',latest_version:'2026.10.1'})
 ]);
+// registre fictif : un serveur et un capteur Zigbee avec leurs entités de diagnostic
+const ago = (h) => new Date(Date.now() - h * 3600e3).toISOString();
+Object.assign(states, Object.fromEntries([
+ S('sensor.serveur_processeur','34',{unit_of_measurement:'%',friendly_name:'Serveur Processeur'}),
+ S('sensor.serveur_disque','88',{unit_of_measurement:'%',friendly_name:'Serveur Disque /'}),
+ S('sensor.serveur_temperature_cpu','61.5',{unit_of_measurement:'°C',device_class:'temperature',friendly_name:'Serveur Température CPU'}),
+ S('sensor.serveur_dernier_demarrage',ago(80),{device_class:'timestamp',friendly_name:'Serveur Dernier démarrage'}),
+ S('binary_sensor.serveur_connectivite','on',{device_class:'connectivity',friendly_name:'Serveur Connectivité'}),
+ S('sensor.sejour_linkquality','35',{friendly_name:'Capteur séjour Linkquality',unit_of_measurement:'lqi'}),
+ S('sensor.sejour_last_seen',ago(0.05),{device_class:'timestamp',friendly_name:'Capteur séjour Last seen'}),
+]));
+const reg = (dev, ids, cat) => ids.map((e) => [e, { entity_id: e, device_id: dev, entity_category: cat || null }]);
+const entities = Object.fromEntries([
+ ...reg('srv', ['sensor.serveur_memoire','sensor.serveur_processeur','sensor.serveur_disque','sensor.serveur_temperature_cpu','sensor.serveur_dernier_demarrage','binary_sensor.serveur_connectivite','update.serveur_fichiers'], 'diagnostic'),
+ ...reg('th', ['sensor.sejour_temperature','sensor.sejour_humidite']), ...reg('th', ['sensor.sejour_batterie','sensor.sejour_linkquality','sensor.sejour_last_seen'], 'diagnostic'),
+]);
+const devices = { srv: { name: 'Serveur', manufacturer: 'Proxmox', model: 'VM Home Assistant', sw_version: '16.2' }, th: { name: 'Capteur séjour', manufacturer: 'Aqara', model: 'WSDCGQ11LM' } };
 window.calls=[]; window.store={};
-const hass = { states, themes:{darkMode: location.hash==='#dark'},
+const hass = { states, entities, devices, areas:{}, themes:{darkMode: location.hash==='#dark'},
   callService:(d,s,data)=>{ calls.push([d,s,data]); const e=data.entity_id; states[e]={...states[e], state: states[e].state==='on'?'off':'on'}; card.hass={...hass, states:{...states}}; },
   callWS:async(m)=>{ if(m.type==='frontend/get_user_data') return {value: store[m.key]||null}; if(m.type==='frontend/set_user_data'){ store[m.key]=JSON.parse(JSON.stringify(m.value)); return {}; } } };
 await customElements.whenDefined('plan-maison-card');

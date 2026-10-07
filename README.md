@@ -188,6 +188,7 @@ Un clic sur la guirlande allume ou éteint l'entité.
 | `icon` | Icône animée de la bibliothèque (voir plus bas) ou icône `mdi:…` statique. Par défaut, elle est devinée. |
 | `kind` | `toggle` (clic = allumer/éteindre), `info` (clic = fiche), `value` (valeur affichée), `widget`. Par défaut : `toggle` pour light/switch/input_boolean/fan, `value` pour un capteur avec unité, sinon `info`. Si tu choisis une icône pour un capteur avec unité, l'icône s'affiche avec sa valeur en pastille (sauf `kind: value` explicite, et sauf pour les widgets météo : ajoute `widget: false` pour leur préférer l'icône). |
 | `widget` | `false` affiche la valeur brute au lieu du widget animé. |
+| `health` | `false` désactive l'état général de l'appareil (voir ci-dessous). |
 | `warn` | `{entity, above, below, prefix}` : pastille « à surveiller » quand la valeur dépasse un seuil. |
 | `gust` | Anémomètre : capteur de rafales (traînées de vent au-delà de 15 km/h). |
 | `intensity` | Pluviomètre : capteur d'intensité (gouttes animées quand il pleut). |
@@ -247,6 +248,15 @@ Conditions : `state` (valeur ou liste), `not`, `above`, `below`. Niveaux : `na` 
 Ces réglages faits directement sur la carte sont enregistrés **pour ton compte**. Pour les rendre définitifs pour tout le monde, ouvre l'éditeur visuel de la carte : un bandeau propose de **les intégrer** à la configuration.
 
 **Exporter** ouvre la configuration YAML complète avec la disposition actuelle, pour la partager ou la reproduire sur un autre Home Assistant.
+
+### État général d'un appareil
+
+Pour chaque équipement placé, la carte retrouve l'appareil Home Assistant auquel appartient l'entité et rassemble ses autres entités : connexion, processeur, mémoire, disque, température interne, pile, signal (dBm ou qualité du lien Zigbee), dernière connexion, dernier démarrage, mises à jour, problèmes signalés. Elle en tire un état général : en bonne santé, à surveiller (disque à 85 %, pile sous 20 %, lien faible, pas de nouvelles depuis 24 h…), problème ou hors ligne.
+
+- Un anneau orange ou rouge entoure la pastille quand l'appareil demande de l'attention.
+- Toucher la pastille d'un équipement d'information (ou appui long sur une pastille qui s'allume et s'éteint) ouvre sa fiche santé : tous les indicateurs, les raisons de l'alerte, la fiche de chaque entité et un lien vers l'appareil dans Home Assistant.
+- Les indicateurs en alerte remontent dans « À regarder ».
+- `health: false` sur un équipement, ou la case correspondante dans l'éditeur, désactive ce suivi.
 
 ### Icônes animées
 

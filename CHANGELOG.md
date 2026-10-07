@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 1.9.0
+
+- État général des appareils : pour un serveur, une box, un capteur Zigbee ou tout équipement de terrain, la carte rassemble toutes les entités de son appareil Home Assistant (connexion, processeur, mémoire, disque, température interne, pile, signal, qualité du lien, dernière connexion, démarrage, mises à jour, problèmes signalés) et en tire un état : en bonne santé, à surveiller, problème ou hors ligne.
+- Anneau orange ou rouge sur la pastille quand l'appareil demande de l'attention ; fiche santé en touchant la pastille (ou appui long sur une pastille commandable) avec tous les indicateurs, les raisons et un lien vers l'appareil dans Home Assistant ; les indicateurs en alerte remontent dans « À regarder ».
+- Éditeur : case « État général de l'appareil » par équipement, avec la liste des indicateurs trouvés (`health: false` pour désactiver).
+
 ## 1.8.2
 
 - Vue d'ensemble épurée : elle ne montre plus que « À regarder » (plus de titre « N pièces, N équipements », de texte d'aide ni de liste des pièces). La liste des pièces revient avec `panel_rooms: true`.
