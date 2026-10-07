@@ -10,7 +10,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.9.0";
+export const VERSION = "1.9.1";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -602,18 +602,30 @@ class PlanMaisonCard extends HTMLElement {
   _hp(d) {
     if (!d || d.garland || d.health === false || !this._hass) return null;
     this._hc = this._hc || {};
-    if (!(d.entity in this._hc)) this._hc[d.entity] = deviceHealth(this._hass, d.entity);
-    return this._hc[d.entity];
+    if (!(d.id in this._hc)) {
+      // indicateurs ignorés : liste de la config (health_ignore) + choix faits sur la carte (mémorisés pour l'utilisateur)
+      const mine = (this._L && this._L.hIgn) || {}, cfgIgn = d.health_ignore || [];
+      const ign = cfgIgn.filter((e) => mine[e] !== false).concat(Object.keys(mine).filter((e) => mine[e] === true));
+      this._hc[d.id] = deviceHealth(this._hass, d.entity, ign);
+    }
+    return this._hc[d.id];
   }
   _healthPop(d) {
     const h = this._hp(d); if (!h) return this._more(d.entity);
     const pop = this._pop; pop.classList.remove("xl"); pop.classList.add("wide");
-    const card = (m) => `<div class="hm ${m.level}" data-e="${esc(m.eid)}" title="${esc(m.eid)}"><div class="k">${esc(m.label)}</div><div class="v">${esc(m.text)}</div>${m.pct != null ? `<div class="bar"><i style="width:${Math.max(2, Math.min(100, m.pct))}%"></i></div>` : ""}</div>`;
+    const card = (m) => `<div class="hm ${m.level}${m.ign ? " ign" : ""}" data-e="${esc(m.eid)}" title="${esc(m.eid)}${m.ign ? " · ignoré : sans effet sur l'état" : ""}"><button class="hig" data-i="${esc(m.eid)}">${m.ign ? "Suivre" : "Ignorer"}</button><div class="k">${esc(m.label)}</div><div class="v">${esc(m.text)}</div>${m.pct != null ? `<div class="bar"><i style="width:${Math.max(2, Math.min(100, m.pct))}%"></i></div>` : ""}</div>`;
+    const ni = h.metrics.filter((m) => m.ign).length;
     pop.innerHTML = `<div class="hsheet"><div class="hhead"><div><div class="t">${esc(this._nm(d))}</div><div class="s">${esc([h.device.name !== this._nm(d) ? h.device.name : "", h.device.model, h.device.sw && "version " + h.device.sw].filter(Boolean).join(" · "))}</div></div><span class="hst ${h.level}">${esc(h.label)}</span></div>
       ${h.reasons.length ? `<ul class="hwhy">${h.reasons.slice(0, 5).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
-      <div class="hgrid">${h.metrics.slice(0, 12).map(card).join("")}</div>
+      <div class="hgrid">${h.metrics.slice(0, 14).map(card).join("")}</div>${ni ? `<p class="hnote">${ni} indicateur${ni > 1 ? "s ignorés" : " ignoré"} : affiché${ni > 1 ? "s" : ""} en pointillés, sans effet sur l'état ni sur « À regarder ».</p>` : ""}
       <div class="row"><button class="btn" id="pm-more">Fiche</button><button class="btn" id="pm-dev">Appareil dans Home Assistant</button><button class="btn" id="pm-x">Fermer</button></div></div>`;
     pop.querySelectorAll(".hm").forEach((b) => (b.onclick = () => this._more(b.dataset.e)));
+    pop.querySelectorAll(".hig").forEach((b) => (b.onclick = (e) => {
+      e.stopPropagation(); const eid = b.dataset.i, m = h.metrics.find((x) => x.eid === eid), cfgIgn = (d.health_ignore || []).includes(eid);
+      this._L.hIgn = this._L.hIgn || {};
+      if (m && m.ign) { if (cfgIgn) this._L.hIgn[eid] = false; else delete this._L.hIgn[eid]; } else { if (cfgIgn) delete this._L.hIgn[eid]; else this._L.hIgn[eid] = true; }
+      this._save(); this._hc = {}; this._states(); this._panel(); this._healthPop(d);
+    }));
     pop.querySelector("#pm-more").onclick = () => this._more(d.entity);
     pop.querySelector("#pm-dev").onclick = () => { history.pushState(null, "", "/config/devices/device/" + h.device.id); window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } })); };
     pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; };

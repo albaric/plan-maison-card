@@ -99,6 +99,20 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   check("santé : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // indicateur de santé ignoré : depuis la fiche (mémorisé pour l'utilisateur) et depuis la config (health_ignore)
+  const { p, errs, c } = await open("complete");
+  const z = (el) => el._hp(el._devs().find((d) => d.id === "zigbee"));
+  const before = await c.evaluate((el) => { const h = el._hp(el._devs().find((d) => d.id === "zigbee")); return { level: h.level, red: el._mk.zigbee.el.classList.contains("h-bad") }; });
+  await c.evaluate((el) => el._healthPop(el._devs().find((d) => d.id === "zigbee")));
+  await c.evaluate((el) => el._pop.querySelector('.hig[data-i="binary_sensor.coordinateur_zigbee_ethernet"]').click()); await p.waitForTimeout(700);
+  const after = await c.evaluate((el) => { const h = el._hp(el._devs().find((d) => d.id === "zigbee")); return { level: h.level, red: el._mk.zigbee.el.classList.contains("h-bad"), ign: !!el._pop.querySelector(".hm.ign"), saved: JSON.stringify(window.store).includes("coordinateur_zigbee_ethernet") }; });
+  const viaCfg = await c.evaluate(async (el) => { el._L.hIgn = {}; const cfg = JSON.parse(JSON.stringify(el._config)); cfg.devices.find((d) => d.id === "zigbee").health_ignore = ["binary_sensor.coordinateur_zigbee_ethernet"]; el.setConfig(cfg); await new Promise((r) => setTimeout(r, 300)); el._hc = {}; return el._hp(el._devs().find((d) => d.id === "zigbee")).level; });
+  check("santé : Ethernet débranché remonte en rouge", before.level === "bad" && before.red, before);
+  check("santé : Ethernet ignoré depuis la fiche (mémorisé)", after.level === "ok" && !after.red && after.ign && after.saved, JSON.stringify(after));
+  check("santé : Ethernet ignoré par la config (health_ignore)", viaCfg === "ok", viaCfg);
+  check("santé ignorée : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 for (const cfg of ["complete", "simple", "stub"]) {
   const { p, errs, c } = await open(cfg);
   await p.screenshot({ path: `${OUT}/${cfg}.png` });

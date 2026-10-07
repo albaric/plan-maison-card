@@ -41,13 +41,15 @@ Object.assign(states, Object.fromEntries([
  S('binary_sensor.serveur_connectivite','on',{device_class:'connectivity',friendly_name:'Serveur Connectivité'}),
  S('sensor.sejour_linkquality','35',{friendly_name:'Capteur séjour Linkquality',unit_of_measurement:'lqi'}),
  S('sensor.sejour_last_seen',ago(0.05),{device_class:'timestamp',friendly_name:'Capteur séjour Last seen'}),
+ S('binary_sensor.coordinateur_zigbee_ethernet','off',{device_class:'connectivity',friendly_name:'SLZB-06 Ethernet'}), S('sensor.coordinateur_zigbee_wifi_rssi','-61',{device_class:'signal_strength',unit_of_measurement:'dBm',friendly_name:'SLZB-06 Wi-Fi RSSI'}),
 ]));
 const reg = (dev, ids, cat) => ids.map((e) => [e, { entity_id: e, device_id: dev, entity_category: cat || null }]);
 const entities = Object.fromEntries([
  ...reg('srv', ['sensor.serveur_memoire','sensor.serveur_processeur','sensor.serveur_disque','sensor.serveur_temperature_cpu','sensor.serveur_dernier_demarrage','binary_sensor.serveur_connectivite','update.serveur_fichiers'], 'diagnostic'),
+ ...reg('slz', ['sensor.coordinateur_zigbee_temperature','sensor.coordinateur_zigbee_connexion']), ...reg('slz', ['binary_sensor.coordinateur_zigbee_ethernet','sensor.coordinateur_zigbee_wifi_rssi'], 'diagnostic'),
  ...reg('th', ['sensor.sejour_temperature','sensor.sejour_humidite']), ...reg('th', ['sensor.sejour_batterie','sensor.sejour_linkquality','sensor.sejour_last_seen'], 'diagnostic'),
 ]);
-const devices = { srv: { name: 'Serveur', manufacturer: 'Proxmox', model: 'VM Home Assistant', sw_version: '16.2' }, th: { name: 'Capteur séjour', manufacturer: 'Aqara', model: 'WSDCGQ11LM' } };
+const devices = { srv: { name: 'Serveur', manufacturer: 'Proxmox', model: 'VM Home Assistant', sw_version: '16.2' }, th: { name: 'Capteur séjour', manufacturer: 'Aqara', model: 'WSDCGQ11LM' }, slz: { name: 'SLZB-06', manufacturer: 'SMLIGHT', model: 'SLZB-06' } };
 window.calls=[]; window.store={};
 const hass = { states, entities, devices, areas:{}, themes:{darkMode: location.hash==='#dark'},
   callService:(d,s,data)=>{ calls.push([d,s,data]); const e=data.entity_id; states[e]={...states[e], state: states[e].state==='on'?'off':'on'}; card.hass={...hass, states:{...states}}; },

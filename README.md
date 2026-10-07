@@ -189,6 +189,7 @@ Un clic sur la guirlande allume ou éteint l'entité.
 | `kind` | `toggle` (clic = allumer/éteindre), `info` (clic = fiche), `value` (valeur affichée), `widget`. Par défaut : `toggle` pour light/switch/input_boolean/fan, `value` pour un capteur avec unité, sinon `info`. Si tu choisis une icône pour un capteur avec unité, l'icône s'affiche avec sa valeur en pastille (sauf `kind: value` explicite, et sauf pour les widgets météo : ajoute `widget: false` pour leur préférer l'icône). |
 | `widget` | `false` affiche la valeur brute au lieu du widget animé. |
 | `health` | `false` désactive l'état général de l'appareil (voir ci-dessous). |
+| `health_ignore` | Liste d'entités de l'appareil à ignorer dans l'état général (ex. `binary_sensor.slzb_06_ethernet` pour un coordinateur volontairement en Wi-Fi). |
 | `warn` | `{entity, above, below, prefix}` : pastille « à surveiller » quand la valeur dépasse un seuil. |
 | `gust` | Anémomètre : capteur de rafales (traînées de vent au-delà de 15 km/h). |
 | `intensity` | Pluviomètre : capteur d'intensité (gouttes animées quand il pleut). |
@@ -256,6 +257,7 @@ Pour chaque équipement placé, la carte retrouve l'appareil Home Assistant auqu
 - Un anneau orange ou rouge entoure la pastille quand l'appareil demande de l'attention.
 - Toucher la pastille d'un équipement d'information (ou appui long sur une pastille qui s'allume et s'éteint) ouvre sa fiche santé : tous les indicateurs, les raisons de l'alerte, la fiche de chaque entité et un lien vers l'appareil dans Home Assistant.
 - Les indicateurs en alerte remontent dans « À regarder ».
+- Un indicateur sans importance dans ton cas (Ethernet débranché sur un appareil volontairement en Wi-Fi, par exemple) peut être ignoré : bouton « Ignorer » sur l'indicateur dans la fiche santé (mémorisé pour ton compte), ou case décochée dans l'éditeur (`health_ignore`, pour tout le monde). Il reste affiché en pointillés, sans effet sur l'état ni sur « À regarder ».
 - `health: false` sur un équipement, ou la case correspondante dans l'éditeur, désactive ce suivi.
 
 ### Icônes animées

@@ -1,6 +1,6 @@
 {
   "name": "plan-maison-card",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Carte Lovelace : plan de maison interactif et éditable pour Home Assistant",
   "type": "module",
   "scripts": {

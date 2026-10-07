@@ -1,5 +1,9 @@
 # Journal des versions
 
+## 1.9.1
+
+- État général : on peut ignorer un indicateur précis (par exemple l'Ethernet d'un coordinateur Zigbee volontairement connecté en Wi-Fi). Bouton « Ignorer » / « Suivre » sur chaque indicateur de la fiche santé (mémorisé pour l'utilisateur), ou cases à cocher par indicateur dans l'éditeur (`health_ignore` dans la config). L'indicateur reste affiché en pointillés, sans effet sur l'état, l'anneau de la pastille ni « À regarder ». « Les intégrer ici » reporte dans la config les indicateurs ignorés sur la carte.
+
 ## 1.9.0
 
 - État général des appareils : pour un serveur, une box, un capteur Zigbee ou tout équipement de terrain, la carte rassemble toutes les entités de son appareil Home Assistant (connexion, processeur, mémoire, disque, température interne, pile, signal, qualité du lien, dernière connexion, démarrage, mises à jour, problèmes signalés) et en tire un état : en bonne santé, à surveiller, problème ou hors ligne.

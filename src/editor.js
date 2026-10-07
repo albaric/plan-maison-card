@@ -91,7 +91,7 @@ svg .room{cursor:pointer;stroke:none}svg .room.sel{fill:var(--sel-soft)}
 svg .rlab{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;fill:var(--ink);pointer-events:none}
 svg .rar{font-family:var(--f-mono);fill:var(--ink-2);pointer-events:none}
 svg .zn{cursor:pointer;stroke:var(--deck-line);stroke-width:.5}svg .zn.sel{stroke:var(--sel);stroke-width:1}
-svg .z-deck{fill:var(--deck)}svg .z-shed{fill:var(--furn-fill);stroke:var(--ink)}svg .z-patch{fill:#cfe6b8}svg .z-pool{fill:#9fd6ef;stroke:#5ba7cc}svg .z-gravel{fill:#e6e0d4}svg .zart{pointer-events:none}svg .zart.zsel{opacity:.55}
+svg .z-deck{fill:var(--deck)}svg .z-shed{fill:var(--furn-fill);stroke:var(--ink)}svg .z-patch{fill:#cfe6b8}svg .z-pool{fill:#9fd6ef;stroke:#5ba7cc}svg .z-gravel{fill:#e6e0d4}svg .zart{pointer-events:none}.hil{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto}.hil .hv{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--ink-2)}.hil .chk2{display:flex;gap:6px;align-items:center}.hil .warn .hv{color:var(--on)}.hil .bad .hv{color:var(--na)}svg .zart.zsel{opacity:.55}
 :host(.dark) svg .z-patch{fill:#35502f}:host(.dark) svg .z-pool{fill:#2f5f78}:host(.dark) svg .z-gravel{fill:#3a372f}
 svg .zlab{font-family:var(--f-display);font-weight:600;letter-spacing:.06em;text-transform:uppercase;fill:var(--ink-2);pointer-events:none}
 svg .ophit{fill:transparent;stroke:transparent;cursor:pointer}svg .op-sel{stroke:var(--sel);stroke-width:1.2;fill:none;pointer-events:none}
@@ -802,7 +802,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (!d) return;
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`, ik = this._devIcon(d);
     box.innerHTML = `<h4>Équipement</h4><div class="f2"><div class="fld">Appareil<span id="en"></span></div>${field("Nom affiché", `<input id="nm" value="${esc(d.raw.name || "")}" placeholder="${esc(this._devName(d))}">`)}${field("Au clic", `<select id="kd">${DKIND.map(([k, l]) => `<option value="${k}" ${(d.raw.kind || "") === k ? "selected" : ""}>${l}</option>`).join("")}</select>`)}</div>
-      ${(() => { const h = deviceHealth(this._hass, d.entity); return `<div class="props" style="padding:8px 10px"><label class="chk2"><input type="checkbox" id="hl" ${d.raw.health === false ? "" : "checked"}> État général de l'appareil</label><p class="muted" style="margin:4px 0 0">${h ? `Appareil « ${esc(h.device.name || "?")} » : ${h.metrics.length} indicateur${h.metrics.length > 1 ? "s" : ""} (${esc(h.metrics.slice(0, 6).map((m) => m.label).join(", "))}${h.metrics.length > 6 ? "…" : ""}). Toucher la pastille ouvre sa fiche santé ; un anneau orange ou rouge signale un problème.` : "Aucun indicateur trouvé : l'entité n'est rattachée à aucun appareil Home Assistant ou celui-ci n'a pas d'entité de diagnostic."}</p></div>`; })()}
+      ${(() => { const ig = d.raw.health_ignore || [], h = deviceHealth(this._hass, d.entity, ig), on = d.raw.health !== false; return `<div class="props" style="padding:8px 10px"><label class="chk2"><input type="checkbox" id="hl" ${on ? "checked" : ""}> État général de l'appareil</label>${!h ? `<p class="muted" style="margin:4px 0 0">Aucun indicateur trouvé : l'entité n'est rattachée à aucun appareil Home Assistant ou celui-ci n'a pas d'entité de diagnostic.</p>` : !on ? "" : `<p class="muted" style="margin:4px 0 2px">Appareil « ${esc(h.device.name || "?")} » · état actuel : <b>${esc(h.label)}</b>. Décoche un indicateur pour l'ignorer (il reste affiché dans la fiche santé, sans effet sur l'état ni sur « À regarder »).</p><div class="hil">${h.metrics.map((m) => `<label class="chk2 ${m.level}"><input type="checkbox" data-hi="${esc(m.eid)}" ${m.ign ? "" : "checked"}> ${esc(m.label)} <span class="hv">${esc(m.text)}</span></label>`).join("")}</div>`}</div>`; })()}
       <div class="s">Icône animée${d.raw.icon ? "" : " (choisie automatiquement)"} :</div><div class="ipk">${Object.entries(ICONS).map(([k, v]) => `<button data-k="${k}" style="--ac:${ACCENT[k] || "var(--sel)"}" class="${ik === k ? "cur" : ""}" title="${esc(v[0])}">${v[1]}<span>${esc(v[0])}</span></button>`).join("")}</div>
       <div class="btns">${d.raw.icon ? '<button class="btn" id="auto">Icône automatique</button>' : ""}<button class="btn" id="unplace">Retirer du plan</button><button class="btn danger" id="del">Supprimer l'équipement</button></div>`;
     const S = this._S;
@@ -810,6 +810,11 @@ class PlanMaisonCardEditor extends HTMLElement {
     box.querySelector("#nm").onchange = (e) => this._change(() => (d.raw.name = e.target.value.trim() || undefined));
     box.querySelector("#kd").onchange = (e) => this._change(() => (d.raw.kind = e.target.value || undefined));
     const hb = box.querySelector("#hl"); if (hb) hb.onchange = (e) => this._change(() => { if (e.target.checked) delete d.raw.health; else d.raw.health = false; });
+    box.querySelectorAll("[data-hi]").forEach((c) => (c.onchange = (e) => this._change(() => {
+      const ids = new Set(d.raw.health_ignore || []), eid = e.target.dataset.hi;
+      if (e.target.checked) ids.delete(eid); else ids.add(eid);
+      if (ids.size) d.raw.health_ignore = [...ids]; else delete d.raw.health_ignore;
+    }, { keepProps: false })));
     box.querySelectorAll(".ipk button").forEach((b) => (b.onclick = () => this._change(() => (d.raw.icon = b.dataset.k))));
     const au = box.querySelector("#auto"); if (au) au.onclick = () => this._change(() => delete d.raw.icon);
     box.querySelector("#unplace").onclick = () => this._change(() => { d.pos = null; this._sel = null; });
@@ -943,6 +948,11 @@ class PlanMaisonCardEditor extends HTMLElement {
     if (L.names) S.rooms.forEach((r) => { if (L.names[r.id]) r.name = L.names[r.id]; });
     S.devices = S.devices.filter((d) => !(L.devHidden && L.devHidden[d.id]));
     S.devices.forEach((d) => { if (L.pos && L.pos[d.id]) d.pos = L.pos[d.id]; if (L.icons && L.icons[d.id]) d.raw.icon = L.icons[d.id]; });
+    if (L.hIgn) S.devices.forEach((d) => { // indicateurs de santé ignorés sur la carte → health_ignore
+      const ids = new Set(d.raw.health_ignore || []); Object.entries(L.hIgn).forEach(([e, v]) => { if (v === false) ids.delete(e); });
+      const h = deviceHealth(this._hass, d.entity); if (h) h.metrics.forEach((m) => { if (L.hIgn[m.eid] === true) ids.add(m.eid); });
+      if (ids.size) d.raw.health_ignore = [...ids]; else delete d.raw.health_ignore;
+    });
     (L.devAdded || []).forEach((a) => S.devices.push({ id: a.entity, entity: a.entity, pos: (L.pos && L.pos[a.id]) || a.pos || null, raw: clean({ icon: (L.icons && L.icons[a.id]) || a.ik }) }));
     S.furniture = S.furniture.filter((f) => !(L.furn && L.furn[f.id] && L.furn[f.id].del));
     S.furniture.forEach((f) => { const o = L.furn && L.furn[f.id]; if (o) { if (o.x != null) f.x = o.x; if (o.y != null) f.y = o.y; if (o.rot != null) f.rot = o.rot; if (o.color) f.color = o.color; } });

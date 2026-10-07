@@ -63,7 +63,8 @@ export function deviceEntities(hass, eid) {
 }
 
 /** Bilan de santé d'un appareil. Renvoie null si l'entité n'est rattachée à aucun appareil ou n'a pas d'indicateur. */
-export function deviceHealth(hass, eid) {
+export function deviceHealth(hass, eid, ignore) {
+  const ign = new Set(ignore || []);
   const d = deviceEntities(hass, eid); if (!d) return null;
   const devName = d.dev.name_by_user || d.dev.name || "";
   const metrics = [];
@@ -98,9 +99,11 @@ export function deviceHealth(hass, eid) {
   if (!metrics.length) return null;
   metrics.sort((x, y) => ORDER.indexOf(x.k) - ORDER.indexOf(y.k));
   const main = hass.states[eid], mainOff = !main || NA.includes(main.state);
-  let level = metrics.reduce((acc, m) => (m.level !== "na" && RANK[m.level] > RANK[acc] ? m.level : acc), "ok");
+  metrics.forEach((m) => (m.ign = ign.has(m.eid))); // indicateurs ignorés : affichés, mais sans effet sur l'état
+  const live = metrics.filter((m) => !m.ign);
+  let level = live.reduce((acc, m) => (m.level !== "na" && RANK[m.level] > RANK[acc] ? m.level : acc), "ok");
   if (mainOff && off >= d.list.length * 0.5) level = "na";
-  const reasons = level === "na" ? ["Ne répond plus"] : metrics.filter((m) => m.level === "bad" || m.level === "warn" || m.level === "info").sort((x, y) => RANK[y.level] - RANK[x.level]).map((m) => `${m.label} : ${m.text}`);
+  const reasons = level === "na" ? ["Ne répond plus"] : live.filter((m) => m.level === "bad" || m.level === "warn" || m.level === "info").sort((x, y) => RANK[y.level] - RANK[x.level]).map((m) => `${m.label} : ${m.text}`);
   return { device: { id: d.id, name: devName, model: [d.dev.manufacturer, d.dev.model].filter(Boolean).join(" · "), sw: d.dev.sw_version || "" }, level, label: HEALTH_LABEL[level], reasons, metrics, count: d.list.length };
 }
 
@@ -122,5 +125,9 @@ export const HEALTH_CSS = `
 .hm.warn .v{color:var(--on)}.hm.bad .v{color:var(--na)}.hm.info .v{color:#2f6fe0}.hm.na .v{color:var(--ink-2)}
 .hm .bar{height:4px;border-radius:2px;background:var(--idle-soft);margin-top:4px;overflow:hidden}.hm .bar i{display:block;height:100%;border-radius:2px;background:var(--ok)}
 .hm.warn .bar i{background:var(--on)}.hm.bad .bar i{background:var(--na)}
+.hm{position:relative}.hm .hig{position:absolute;top:4px;right:4px;font:inherit;font-size:10.5px;line-height:1.4;padding:0 6px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer;opacity:0;transition:opacity .15s}
+.hm:hover .hig,.hm.ign .hig{opacity:1}@media (hover:none){.hm .hig{opacity:1}}.hm .hig:hover{border-color:var(--sel);color:var(--sel)}
+.hm.ign{opacity:.55;border-style:dashed}.hm.ign .v{color:var(--ink-2)!important;text-decoration:line-through}.hm.ign .bar i{background:var(--idle)!important}
+.hnote{font-size:11.5px;color:var(--ink-2);margin:0}
 .hdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:6px;vertical-align:middle}.hdot.warn{background:var(--on)}.hdot.bad{background:var(--na)}.hdot.info{background:#2f6fe0}
 `;
