@@ -161,6 +161,31 @@ for (const cfg of ["complete", "simple", "stub"]) {
   check(`${cfg}: aucune erreur JS`, errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // anémomètre : rotation proportionnelle au vent, continue lors des mises à jour, plafonnée à haute vitesse
+  const { p, errs, c } = await open("complete");
+  const r = await p.evaluate(async () => {
+    const E = "sensor.anemometre_vitesse_moyenne", id = Object.keys(card._mk).find((k) => card._mk[k].d.entity === E && card._mk[k].d.wg === "wind");
+    const set = (v, u = "km/h") => { const h = card._hass; card.hass = { ...h, states: { ...h.states, [E]: { ...h.states[E], state: String(v), attributes: { ...h.states[E].attributes, unit_of_measurement: u } } } }; };
+    const ang = () => { const t = card._mk[id].el.querySelector(".rot").getAttribute("transform") || ""; const m = /rotate\(([-\d.]+)/.exec(t); return m ? +m[1] : 0; };
+    const frame = () => new Promise((r) => requestAnimationFrame(r));
+    const rate = async (ms) => { let a0 = ang(), tot = 0, prev = a0, maxStep = 0; const t0 = performance.now(); while (performance.now() - t0 < ms) { await frame(); const a = ang(); let d = a - prev; if (d < -180) d += 360; tot += d; maxStep = Math.max(maxStep, Math.abs(d)); prev = a; } return { rps: tot / 360 / (ms / 1000), maxStep }; };
+    const settle = () => new Promise((r) => setTimeout(r, 6000));
+    set(10); await settle(); const r10 = await rate(1500);
+    set(20); await settle(); const r20 = await rate(1500);
+    // une mise à jour ne fait pas sauter l'angle
+    await frame(); const a1 = ang(), t1 = performance.now(); set(22); await frame(); await frame(); const a2 = ang(), dt = (performance.now() - t1) / 1000; let jump = a2 - a1; if (jump < -180) jump += 360; jump -= r20.rps * 360 * dt;
+    set(25, "m/s"); await settle(); const r90 = await rate(1500);
+    const blur = getComputedStyle(card._mk[id].el).getPropertyValue("--blur");
+    set(0); await settle(); const r0 = await rate(800);
+    return { r10, r20, jump, r90, blur, r0, id };
+  });
+  check("anémomètre : rotation proportionnelle (20 km/h ≈ 2 × 10 km/h)", Math.abs(r.r20.rps / r.r10.rps - 2) < 0.15 && Math.abs(r.r10.rps - 0.667) < 0.08, r);
+  check("anémomètre : pas de saut d'angle à la mise à jour", Math.abs(r.jump) < 15, r.jump);
+  check("anémomètre : m/s converti, vitesse plafonnée, flou à haute vitesse", r.r90.rps > 2.3 && r.r90.rps < 2.65 && +r.blur > 0.8, JSON.stringify({ ...r.r90, blur: r.blur }));
+  check("anémomètre : immobile sans vent", Math.abs(r.r0.rps) < 0.05, r.r0);
+  check("anémomètre : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 { // sombre + bibliothèque d'icônes
   const { p, errs, c } = await open("complete", "#dark");
   await c.locator("#seg button[data-m=dev]").click(); await p.waitForTimeout(150);

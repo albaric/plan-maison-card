@@ -36,6 +36,11 @@ const tempColor = (t) => {
 };
 const DC_COLOR = { temperature: "temperature", humidity: "#3e7bfa", pressure: "#8e6bd8", atmospheric_pressure: "#8e6bd8", precipitation: "#2bb3a3", precipitation_intensity: "#2bb3a3", wind_speed: "#5aa0ff", battery: "#30a46c", illuminance: "#f5a524", power: "#f07a2c", energy: "#f07a2c" };
 const DC_ICON = { temperature: "mdi:thermometer", humidity: "mdi:water-percent", pressure: "mdi:gauge", atmospheric_pressure: "mdi:gauge", precipitation: "mdi:weather-rainy", precipitation_intensity: "mdi:weather-pouring", wind_speed: "mdi:weather-windy", battery: "mdi:battery", illuminance: "mdi:brightness-5", power: "mdi:flash", energy: "mdi:lightning-bolt" };
+/** Vitesse de vent ramenée en km/h. */
+const kmh = (v, u) => (u === "m/s" ? v * 3.6 : u === "mph" ? v * 1.609 : u === "kn" || u === "kt" ? v * 1.852 : u === "ft/s" ? v * 1.097 : v);
+/** Tours par seconde de l'anémomètre : linéaire (1 tour/s pour 15 km/h) jusqu'à 30 km/h, puis tend vers 2,6 tours/s. */
+const windRps = (w) => (w < 0.5 ? 0 : w <= 30 ? w / 15 : 2 + 0.6 * (1 - Math.exp(-(w - 30) / 25)));
+const RM = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Type de widget animé pour un capteur, d'après sa classe ou son unité. */
 function humColor(h) { return h < 30 ? "#e3a03a" : h < 40 ? "#6cc1b5" : h <= 60 ? "#3fa7e0" : h <= 70 ? "#2f86d6" : "#2a5fc4"; }
@@ -177,7 +182,7 @@ class PlanMaisonCard extends HTMLElement {
     if (!this._rs) this._rs = (e) => { if (!this._L || !e.detail || e.detail.key !== this._key) return; this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} }; if (this._built) this._reconfig(); };
     window.addEventListener("plan-maison-layout-reset", this._rs);
   }
-  disconnectedCallback() { if (this._kd) document.removeEventListener("keydown", this._kd); if (this._rs) window.removeEventListener("plan-maison-layout-reset", this._rs); }
+  disconnectedCallback() { if (this._wRaf) { cancelAnimationFrame(this._wRaf); this._wRaf = 0; } if (this._kd) document.removeEventListener("keydown", this._kd); if (this._rs) window.removeEventListener("plan-maison-layout-reset", this._rs); }
   _confirm(btn, fn) {
     if (btn.dataset.arm !== "1") { btn.dataset.arm = "1"; const t = btn.textContent; btn.dataset.t = t; btn.textContent = "Confirmer"; setTimeout(() => { if (btn.dataset.arm === "1") { btn.dataset.arm = ""; btn.textContent = t; } }, 3000); return; }
     btn.dataset.arm = ""; btn.textContent = btn.dataset.t || btn.textContent; fn();
@@ -644,8 +649,12 @@ class PlanMaisonCard extends HTMLElement {
       s.setProperty("--sun", this._where(d).k !== "room" && t >= 22 ? 1 : 0);
     }
     if (d.wg === "wind") {
-      const w = v || 0, gu = (d.gust && this._num(d.gust)) || w;
-      s.setProperty("--spd", cl(0.18, 6, 9 / Math.max(w, 0.1)).toFixed(2) + "s"); s.setProperty("--play", w < 0.5 ? "paused" : "running"); s.setProperty("--gust", gu >= 15 ? 1 : w >= 6 ? 0.55 : 0);
+      const w = kmh(v || 0, u), gu = d.gust && this._num(d.gust) != null ? kmh(this._num(d.gust), (S[d.gust] && S[d.gust].attributes.unit_of_measurement) || u) : w;
+      // vitesse de rotation proportionnelle au vent jusqu'à 30 km/h, puis plafonnée en douceur (au-delà, l'œil voit les coupelles tourner à l'envers) ;
+      // les vents plus forts se lisent au flou de rotation et aux traînées
+      const ws = (this._wst = this._wst || {}); ws[d.id] = Object.assign(ws[d.id] || { a: 0, r: 0 }, { t: windRps(w) });
+      s.setProperty("--blur", cl(0, 0.85, (w - 20) / 50).toFixed(2)); s.setProperty("--gust", gu >= 50 ? 1 : gu >= 25 || w >= 20 ? 0.55 : 0);
+      this._windStart();
     }
     if (d.wg === "hum") {
       const h = cl(0, 100, v == null ? 50 : v);
@@ -657,6 +666,27 @@ class PlanMaisonCard extends HTMLElement {
       const mm = v || 0; // échelle racine : quelques millimètres restent visibles, le bocal est plein vers 30 mm
       s.setProperty("--lvl", (mm > 0 ? cl(0.08, 1, Math.sqrt(mm / 30)) : 0).toFixed(3)); s.setProperty("--rain", ri > 0 ? "running" : "paused"); m.classList.toggle("raining", ri > 0); m.classList.toggle("wet", mm > 0);
     }
+  }
+  /** Anémomètres : rotation pilotée image par image (angle continu, vitesse lissée), pour éviter les sauts d'une animation CSS dont on change la durée. */
+  _windStart() {
+    if (this._wRaf || RM()) return;
+    let last = 0;
+    const step = (now) => {
+      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0; last = now;
+      let any = false;
+      for (const k in this._mk || {}) {
+        const { el, d } = this._mk[k];
+        const W = this._wst && this._wst[d.id];
+        if (d.wg !== "wind" || !W || !el.isConnected) continue;
+        if (W.t > 0 || W.r > 0.002) any = true;
+        W.r += (W.t - W.r) * (1 - Math.exp(-dt / 1.2)); // inertie d'environ une seconde
+        W.a = (W.a + W.r * 360 * dt) % 360;
+        const g = el._rot && el._rot.isConnected ? el._rot : (el._rot = el.querySelector(".rot"));
+        if (g) g.setAttribute("transform", "rotate(" + W.a.toFixed(1) + " 14 13)");
+      }
+      this._wRaf = any && this.isConnected ? requestAnimationFrame(step) : 0;
+    };
+    this._wRaf = requestAnimationFrame(step);
   }
   _act(m, d, s) {
     const st = this._hass.states[d.entity];
