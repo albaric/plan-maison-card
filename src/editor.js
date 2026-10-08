@@ -897,7 +897,7 @@ class PlanMaisonCardEditor extends HTMLElement {
   _setTab() {
     const box = this.$("p-set"), c = this._cfg, al = c.alerts || {}, gd = c.garden === false ? null : c.garden || {};
     const field = (lab, html) => `<label class="fld">${lab}${html}</label>`;
-    box.innerHTML = `<div class="props"><h4>Général</h4><div class="f2">${field("Titre", `<input id="ti" value="${esc(c.title ?? "")}" placeholder="Ma maison">`)}${field("Thème", `<select id="th"><option value="">Comme Home Assistant</option><option value="light" ${c.theme === "light" ? "selected" : ""}>Toujours clair</option><option value="dark" ${c.theme === "dark" ? "selected" : ""}>Toujours sombre</option></select>`)}</div>
+    box.innerHTML = `<div class="props"><h4>Général</h4><div class="f2">${field("Titre", `<input id="ti" value="${esc(c.title ?? "")}" placeholder="Ma maison">`)}${field("Thème", `<select id="th"><option value="">Comme Home Assistant</option><option value="light" ${c.theme === "light" ? "selected" : ""}>Toujours clair</option><option value="dark" ${c.theme === "dark" ? "selected" : ""}>Toujours sombre</option></select>`)}${field("Animations", `<select id="an"><option value="">Économes (recommandé)</option><option value="full" ${c.animations === "full" ? "selected" : ""}>Toutes, en continu</option><option value="off" ${c.animations === "off" ? "selected" : ""}>Aucune</option></select>`)}</div><p style="margin:6px 0 0;font-size:12px;opacity:.75">Économes : seuls ce qui tourne ou coule (ventilateur, lave-linge, vent, pluie) et les guirlandes s'animent en continu ; les autres icônes s'animent quelques secondes après un changement ou au survol.</p>
         <div class="btns"><label class="chk2"><input type="checkbox" id="hd" ${c.header === false ? "" : "checked"}> Afficher le titre et l'heure</label><label class="chk2"><input type="checkbox" id="fo" ${c.fonts === false ? "" : "checked"}> Polices de la carte (Google Fonts)</label></div></div>
       <div class="props"><h4>Jardin</h4><div class="btns"><label class="chk2"><input type="checkbox" id="gd" ${gd ? "checked" : ""}> Dessiner le jardin autour de la maison</label></div>
         ${gd ? `<div class="f2">${field("Libellé", `<input id="gl" value="${esc(gd.label ?? "Jardin")}">`)}</div><div class="btns"><label class="chk2"><input type="checkbox" id="at" ${gd.trees ? "" : "checked"}> Arbres placés automatiquement</label></div>` : ""}
@@ -911,6 +911,7 @@ class PlanMaisonCardEditor extends HTMLElement {
     const $ = (id) => box.querySelector("#" + id);
     $("ti").onchange = (e) => upd((c) => (c.title = e.target.value));
     $("th").onchange = (e) => upd((c) => { if (e.target.value) c.theme = e.target.value; else delete c.theme; });
+    $("an").onchange = (e) => upd((c) => { if (e.target.value) c.animations = e.target.value; else delete c.animations; });
     $("hd").onchange = (e) => upd((c) => { if (e.target.checked) delete c.header; else c.header = false; });
     $("fo").onchange = (e) => upd((c) => { if (e.target.checked) delete c.fonts; else c.fonts = false; });
     $("pn").onchange = (e) => upd((c) => { if (e.target.checked) delete c.panel; else c.panel = false; });

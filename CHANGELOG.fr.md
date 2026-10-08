@@ -2,6 +2,17 @@
 
 [English](CHANGELOG.md) · **Français**
 
+## 1.11.0
+
+- Beaucoup plus léger pour le navigateur (Safari en particulier). Mesuré sur le plan d'exemple : le travail du fil principal passe d'environ 40 % d'un cœur à presque rien.
+  - Seul ce dont le mouvement a un sens s'anime en continu : ventilateur, pompe à chaleur, purificateur, lave-linge, lave-vaisselle, aspirateur, arroseur, robinet, vanne, borne de recharge, piscine, anémomètre (s'il y a du vent), pluviomètre (s'il pleut) et guirlandes. Les autres icônes (lumières, serveurs, caméras…) gardent leurs couleurs d'allumage et s'animent 6 secondes après un changement d'état, ou au survol. Le mobilier ne bouge plus.
+  - Guirlandes : la lueur et le halo sont dessinés dans des calques à part, ajustés aux guirlandes ; le scintillement ne fait varier que l'opacité de ces calques (géré par la carte graphique) au lieu de redessiner tout le plan et ses flous à chaque image.
+  - La carte ne se redessine que si une de ses entités change (équipements placés et leur appareil Home Assistant, bandeau, règles d'alerte, piles, mises à jour), et non plus à chaque changement d'état de la maison ; la vue d'ensemble est rafraîchie au plus deux fois par seconde et seulement si son contenu change.
+  - Les animations s'arrêtent quand la carte est hors de l'écran.
+  - L'anneau de santé et le voyant « en direct » ne pulsent plus en continu (toujours avec `animations: full`).
+- Nouvelle option `animations` (éditeur : Réglages, « Animations ») : `auto` (par défaut), `full` (tout animé en continu, comme avant) ou `off`.
+- Le serveur Home Assistant n'est pas concerné : la carte fonctionne entièrement dans le navigateur.
+
 ## 1.10.3
 
 - Documentation en anglais (README et journal des versions) ; les versions françaises sont conservées dans `README.fr.md` et `CHANGELOG.fr.md`.

@@ -2,15 +2,15 @@
 import { ICONS, ALWAYS, ACCENT, guess } from "./icons.js";
 import { CAT, FSTYLE, META, furnParts } from "./furniture.js";
 import { furnSvg, FURN_DEFS, furnLibHtml, furnSwatches, zoneArt } from "./furnart.js";
-import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG } from "./styles.js";
+import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG, MOTION_CSS } from "./styles.js";
 import * as G from "./geometry.js";
-import { deviceHealth, HEALTH_CSS } from "./health.js";
+import { deviceHealth, deviceEntities, HEALTH_CSS } from "./health.js";
 import { toYaml } from "./yaml.js";
 import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.10.3";
+export const VERSION = "1.11.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -36,6 +36,8 @@ const tempColor = (t) => {
 };
 const DC_COLOR = { temperature: "temperature", humidity: "#3e7bfa", pressure: "#8e6bd8", atmospheric_pressure: "#8e6bd8", precipitation: "#2bb3a3", precipitation_intensity: "#2bb3a3", wind_speed: "#5aa0ff", battery: "#30a46c", illuminance: "#f5a524", power: "#f07a2c", energy: "#f07a2c" };
 const DC_ICON = { temperature: "mdi:thermometer", humidity: "mdi:water-percent", pressure: "mdi:gauge", atmospheric_pressure: "mdi:gauge", precipitation: "mdi:weather-rainy", precipitation_intensity: "mdi:weather-pouring", wind_speed: "mdi:weather-windy", battery: "mdi:battery", illuminance: "mdi:brightness-5", power: "mdi:flash", energy: "mdi:lightning-bolt" };
+/** Icônes dont le mouvement dit quelque chose (ça tourne, ça coule, ça lave) : animées en continu tant qu'elles sont actives, même en mode économe. */
+const CONT = { fan: 1, heatpump: 1, purifier: 1, washer: 1, dishwasher: 1, vacuum: 1, sprinkler: 1, faucet: 1, valve: 1, ev: 1, pool: 1 };
 
 /** Type de widget animé pour un capteur, d'après sa classe ou son unité. */
 function humColor(h) { return h < 30 ? "#e3a03a" : h < 40 ? "#6cc1b5" : h <= 60 ? "#3fa7e0" : h <= 70 ? "#2f86d6" : "#2a5fc4"; }
@@ -68,12 +70,33 @@ class PlanMaisonCard extends HTMLElement {
   }
 
   set hass(h) {
-    const first = !this._hass; this._hass = h; this._hc = {};
-    if (first) { this._setup(); this._load(); return; }
+    const prev = this._hass; this._hass = h;
+    if (!prev) { this._hc = {}; this._setup(); this._load(); return; }
     this._theme();
-    if (this._built) { this._states(); this._meteo(); this._live(); if (!this._dragging) this._panelSoon(); }
+    if (!this._built) return;
+    this._live();
+    // Home Assistant renvoie l'objet hass à chaque changement d'état de toute la maison : on ne redessine que si une entité utilisée par la carte a changé
+    if (!this._changed(prev, h)) return;
+    this._hc = {}; this._states(); this._meteo(); if (!this._dragging) this._panelSoon();
   }
-  _panelSoon() { clearTimeout(this._pt0); this._pt0 = setTimeout(() => this._panel(), 300); }
+  /** Vrai si un changement concerne la carte : entité de la config ou d'un équipement placé (et de son appareil), pile, mise à jour, registre. */
+  _changed(a, b) {
+    if (a.entities !== b.entities || a.devices !== b.devices) { this._wIds = null; return true; }
+    if (a.states === b.states) return false;
+    const W = this._watchIds(), A = a.states, B = b.states, bat = (x) => !!(x && x.attributes && x.attributes.device_class === "battery");
+    for (const k in B) { const x = B[k]; if (A[k] !== x && (W.has(k) || k.startsWith("update.") || bat(x) || bat(A[k]))) return true; }
+    for (const k in A) if (!(k in B) && W.has(k)) return true;
+    return false;
+  }
+  _watchIds() {
+    if (this._wIds) return this._wIds;
+    const W = new Set(JSON.stringify(this._config).match(/[a-z_]+\.[a-z0-9_]+/g) || []);
+    if (this._L) (JSON.stringify([this._L.devAdded || [], this._L.hIgn || {}, this._L.wMute || {}]).match(/[a-z_]+\.[a-z0-9_]+/g) || []).forEach((e) => W.add(e));
+    if (this._model) this._devs().forEach((d) => { [d.entity, d.gust, d.intensity, d.warn && d.warn.entity].forEach((e) => e && W.add(e)); const de = d.health !== false && !d.garland && deviceEntities(this._hass, d.entity); if (de) de.list.forEach((e) => W.add(e.entity_id)); });
+    return (this._wIds = W);
+  }
+  // au plus une mise à jour de la vue d'ensemble par demi-seconde, même si la maison envoie des changements en continu
+  _panelSoon() { if (this._pt0) return; this._pt0 = setTimeout(() => { this._pt0 = 0; this._panel(); }, 500); }
   _theme() { const t = this._config.theme; this.classList.toggle("dark", t === "dark" || (t !== "light" && !!(this._hass.themes && this._hass.themes.darkMode))); }
 
   /* ---------- mise en place ---------- */
@@ -103,7 +126,7 @@ class PlanMaisonCard extends HTMLElement {
     this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} };
     this._AX = Object.assign({}, this._defAX); this._geo();
     const r = this.attachShadow({ mode: "open" });
-    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}${HEALTH_CSS}</style><ha-card><div class="wrap">
+    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}${HEALTH_CSS}${MOTION_CSS}</style><ha-card><div class="wrap">
       <header><h1 id="title"></h1><div class="live" id="live"><i></i><span></span></div></header>
       <section class="meteo" id="meteo"></section>
       <div class="main">
@@ -116,7 +139,7 @@ class PlanMaisonCard extends HTMLElement {
           <div class="movebar" id="t-furn" hidden><span>Glisse un meuble, touche-le pour le pivoter ou le retirer (clavier : flèches, R, Suppr).</span><span class="sp"></span>
             <button class="btn solid" id="furn-lib">Ajouter un meuble…</button><button class="btn" id="furn-reset">Rétablir le mobilier</button></div>
           <div class="movebar" id="t-walls" hidden><span id="winfo">Glisse une poignée bleue pour déplacer une cloison, au pas de 5 cm. Les cloisons voisines sont poussées si besoin.</span><span class="sp"></span><button class="btn" id="walls-reset">Rétablir les murs</button></div>
-          <div class="stage" id="stage"><svg id="svg"></svg><div class="ovl" id="ovl"></div><div class="pop" id="pop" hidden></div></div>
+          <div class="stage" id="stage"><svg id="svg"></svg><div class="glw" id="glw"></div><div class="ovl" id="ovl"></div><div class="pop" id="pop" hidden></div></div>
           <div class="legend"><span><i class="dot" style="background:var(--on-fill);border-color:var(--on)"></i>Allumé, ouvert</span><span><i class="dot"></i>Éteint, fermé</span>
             <span><i class="dot" style="border-color:var(--on);border-width:2.5px"></i>À surveiller</span><span><i class="dot" style="background:var(--na-soft);border-color:var(--na);border-style:dashed"></i>Indisponible</span>
             <span>Clic : allumer ou éteindre · appui long : fiche</span></div>
@@ -143,6 +166,7 @@ class PlanMaisonCard extends HTMLElement {
     this.$("title").textContent = c.title != null ? c.title : "Maison";
     this.$("title").parentElement.hidden = c.header === false;
     this._svg.setAttribute("viewBox", this._view.join(" "));
+    const am = this._amode(); this.classList.toggle("anim-full", am === "full"); this.classList.toggle("anim-off", am === "off");
     const mt = this.$("meteo"); mt.textContent = ""; mt.hidden = !(c.banner && c.banner.length);
     this._panelLayout();
   }
@@ -176,8 +200,11 @@ class PlanMaisonCard extends HTMLElement {
     if (this._kd) { document.removeEventListener("keydown", this._kd); document.addEventListener("keydown", this._kd); }
     if (!this._rs) this._rs = (e) => { if (!this._L || !e.detail || e.detail.key !== this._key) return; this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} }; if (this._built) this._reconfig(); };
     window.addEventListener("plan-maison-layout-reset", this._rs);
+    // carte hors de l'écran (vue défilée, autre onglet du tableau de bord) : animations suspendues
+    if (!this._io && typeof IntersectionObserver === "function") this._io = new IntersectionObserver((es) => { this._vis = es[es.length - 1].isIntersecting; if (this._stage) this._stage.classList.toggle("still", !this._vis); });
+    if (this._io) this._io.observe(this);
   }
-  disconnectedCallback() { if (this._kd) document.removeEventListener("keydown", this._kd); if (this._rs) window.removeEventListener("plan-maison-layout-reset", this._rs); }
+  disconnectedCallback() { if (this._io) this._io.disconnect(); clearTimeout(this._at); this._at = 0; if (this._kd) document.removeEventListener("keydown", this._kd); if (this._rs) window.removeEventListener("plan-maison-layout-reset", this._rs); }
   _confirm(btn, fn) {
     if (btn.dataset.arm !== "1") { btn.dataset.arm = "1"; const t = btn.textContent; btn.dataset.t = t; btn.textContent = "Confirmer"; setTimeout(() => { if (btn.dataset.arm === "1") { btn.dataset.arm = ""; btn.textContent = t; } }, 3000); return; }
     btn.dataset.arm = ""; btn.textContent = btn.dataset.t || btn.textContent; fn();
@@ -204,7 +231,7 @@ class PlanMaisonCard extends HTMLElement {
       .replace(/\{name\}/g, () => ctx.name || "")
       .replace(/\{since\}/g, () => { const s = ctx.entity && this._hass.states[ctx.entity]; return s ? new Date(s.last_changed).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""; });
   }
-  _live() { const sp = this.$("live").querySelector("span"); sp.textContent = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + " · en direct " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); }
+  _live() { const sp = this.$("live").querySelector("span"), t = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + " · en direct " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }); if (sp.textContent !== t) sp.textContent = t; }
   _meteo() {
     const list = this._config.banner || [], box = this.$("meteo");
     if (!list.length) return;
@@ -354,8 +381,8 @@ class PlanMaisonCard extends HTMLElement {
   /* ---------- dessin ---------- */
   _build() {
     const s = this._svg, el = this._el.bind(this);
-    s.textContent = "";
-    this._stage.className = "stage m-" + this._mode + (this._mode !== "view" ? " editing" : "") + (this.$("showdev").checked ? "" : " hide-dev");
+    s.textContent = ""; this._wIds = null;
+    this._stage.className = "stage m-" + this._mode + (this._mode !== "view" ? " editing" : "") + (this.$("showdev").checked ? "" : " hide-dev") + (this._vis === false ? " still" : "");
     const defs = el("defs", {}, s);
     const pat = el("pattern", { id: "pmh", width: 3, height: 3, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, defs);
     el("rect", { width: 3, height: 3, class: "hb" }, pat); el("line", { x1: 0, y1: 0, x2: 0, y2: 3, class: "hl" }, pat);
@@ -489,18 +516,37 @@ class PlanMaisonCard extends HTMLElement {
     const el = this._el.bind(this);
     const path = (pts, sag) => { let d = ""; for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1]; d += `M${a[0]} ${a[1]}Q${(a[0] + b[0]) / 2} ${(a[1] + b[1]) / 2 + sag} ${b[0]} ${b[1]}`; } return d; };
     this._lg = {};
-    this._model.garlands.forEach((l) => {
-      if (l.pts.length < 2) return;
+    // Lueur et halo flous dans des calques à part, ajustés aux guirlandes : leur scintillement ne fait varier que l'opacité
+    // de ces calques (géré par la carte graphique), sans redessiner le plan ni recalculer les flous à chaque image.
+    const glw = this.$("glw"); glw.textContent = "";
+    const GL = this._model.garlands.filter((l) => l.pts.length >= 2);
+    let L = null;
+    if (GL.length) {
+      const V = this._view, xs = [], ys = [];
+      GL.forEach((l) => l.pts.forEach(([x, y]) => { xs.push(x); ys.push(y, y + Math.max(0, l.sag)); }));
+      const mg = Math.max(...GL.map((l) => l.w)) * 9 + 8, bx = Math.min(...xs) - mg, by = Math.min(...ys) - mg, bw = Math.max(...xs) - bx + mg, bh = Math.max(...ys) - by + mg;
+      const pc = (v, o, t) => (((v - o) / t) * 100).toFixed(3) + "%";
+      L = ["gh", "ga", "gb", "gt"].map((c, i) => {
+        const sv = document.createElementNS(NS, "svg");
+        sv.setAttribute("class", c); sv.setAttribute("viewBox", `${bx} ${by} ${bw} ${bh}`); sv.setAttribute("preserveAspectRatio", "none");
+        Object.assign(sv.style, { left: pc(bx, V[0], V[2]), top: pc(by, V[1], V[3]), width: ((bw / V[2]) * 100).toFixed(3) + "%", height: ((bh / V[3]) * 100).toFixed(3) + "%" });
+        if (i < 3) el("feGaussianBlur", { stdDeviation: i ? 0.8 : 2.2 }, el("filter", { id: "pmgl" + i, x: bx, y: by, width: bw, height: bh, filterUnits: "userSpaceOnUse" }, el("defs", {}, sv)));
+        glw.appendChild(sv); return sv;
+      });
+    }
+    GL.forEach((l) => {
       const d = path(l.pts, l.sag), gg = el("g", { class: "lights" }, g), cols = l.colors, sp = l.gap, w = l.w;
       (this._lg[l.entity] = this._lg[l.entity] || []).push(gg);
       const st = this._hass.states[l.entity];
       el("title", {}, gg).textContent = (l.name || (st && st.attributes.friendly_name) || l.entity || "Guirlande") + (l.entity ? " · clic pour allumer ou éteindre" : " · à relier à un interrupteur dans l'éditeur");
       const warm = cols.length === 1;
-      el("path", { d, class: "halo", stroke: warm ? cols[0] : "#ffe3a3", "stroke-width": w * 9, "stroke-linecap": "round", fill: "none" }, gg);   // lumière diffuse autour de la guirlande
+      // calques : halo, lueurs (deux groupes qui scintillent en décalé), puis ampoules nettes par-dessus (calque fixe)
+      const lay = L.map((sv, i) => { const lg = el("g", i < 3 ? { class: "lights gl", filter: "url(#pmgl" + i + ")" } : { class: "lights gt" }, sv); this._lg[l.entity].push(lg); return lg; });
+      el("path", { d, class: "halo", stroke: warm ? cols[0] : "#ffe3a3", "stroke-width": w * 9, "stroke-linecap": "round", fill: "none" }, lay[0]);   // lumière diffuse autour de la guirlande
       el("path", { d, class: "cable" }, gg);
-      cols.forEach((c, i) => el("path", { d, class: "glow g" + (i % 4), stroke: c, "stroke-width": w * 3.2, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
-      cols.forEach((c, i) => el("path", { d, class: "bulb g" + (i % 4), stroke: c, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, gg));
-      el("path", { d, class: "core", stroke: "#fffbe8", "stroke-width": w * 0.42, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp, fill: "none" }, gg);   // filament blanc des ampoules allumées
+      cols.forEach((c, i) => el("path", { d, class: "glow", stroke: c, "stroke-width": w * 3.2, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, lay[1 + (i % 2)]));
+      cols.forEach((c, i) => el("path", { d, class: "bulb g" + (i % 4), stroke: c, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp * cols.length, "stroke-dashoffset": -sp * i, fill: "none" }, lay[3]));
+      el("path", { d, class: "core", stroke: "#fffbe8", "stroke-width": w * 0.42, "stroke-linecap": "round", "stroke-dasharray": "0 " + sp, fill: "none" }, lay[3]);   // filament blanc des ampoules allumées
       el("path", { d, class: "hit" }, gg);
       gg.onclick = (e) => { e.stopPropagation(); if (this._mode === "view" && l.entity) this._tap({ entity: l.entity, kind: "t" }); };
     });
@@ -636,7 +682,7 @@ class PlanMaisonCard extends HTMLElement {
   _wgUpd(m, d) {
     const S = this._hass.states, st = S[d.entity], v = this._num(d.entity), cl = (a, b, x) => Math.max(a, Math.min(b, x));
     const u = st && st.attributes.unit_of_measurement ? st.attributes.unit_of_measurement : "";
-    m.querySelector(".v").innerHTML = v == null ? "–" : fr(Math.round(v * 10) / 10) + "<small>" + esc(u) + "</small>";
+    const vh = v == null ? "–" : fr(Math.round(v * 10) / 10) + "<small>" + esc(u) + "</small>", ve = m.querySelector(".v"); if (ve._h !== vh) { ve._h = vh; ve.innerHTML = vh; }
     const s = m.style;
     if (d.wg === "temp") {
       const t = v == null ? 15 : u === "°F" ? ((v - 32) * 5) / 9 : v;
@@ -645,7 +691,8 @@ class PlanMaisonCard extends HTMLElement {
     }
     if (d.wg === "wind") {
       const w = v || 0, gu = (d.gust && this._num(d.gust)) || w;
-      s.setProperty("--spd", cl(0.18, 6, 9 / Math.max(w, 0.1)).toFixed(2) + "s"); s.setProperty("--play", w < 0.5 ? "paused" : "running"); s.setProperty("--gust", gu >= 15 ? 1 : w >= 6 ? 0.55 : 0);
+      s.setProperty("--spd", cl(0.18, 6, 9 / Math.max(w, 0.1)).toFixed(2) + "s"); s.setProperty("--play", w < 0.5 ? "paused" : "running"); const gs = gu >= 15 ? 1 : w >= 6 ? 0.55 : 0; s.setProperty("--gust", gs);
+      m._cont = w >= 0.5; m.classList.toggle("gusty", gs > 0);
     }
     if (d.wg === "hum") {
       const h = cl(0, 100, v == null ? 50 : v);
@@ -655,8 +702,28 @@ class PlanMaisonCard extends HTMLElement {
     if (d.wg === "rain") {
       const ri = (d.intensity && this._num(d.intensity)) || 0;
       const mm = v || 0; // échelle racine : quelques millimètres restent visibles, le bocal est plein vers 30 mm
-      s.setProperty("--lvl", (mm > 0 ? cl(0.08, 1, Math.sqrt(mm / 30)) : 0).toFixed(3)); s.setProperty("--rain", ri > 0 ? "running" : "paused"); m.classList.toggle("raining", ri > 0); m.classList.toggle("wet", mm > 0);
+      s.setProperty("--lvl", (mm > 0 ? cl(0.08, 1, Math.sqrt(mm / 30)) : 0).toFixed(3)); s.setProperty("--rain", ri > 0 ? "running" : "paused"); m._cont = ri > 0; m.classList.toggle("raining", ri > 0); m.classList.toggle("wet", mm > 0);
     }
+  }
+  /* ---------- sobriété des animations ---------- */
+  _amode() { const a = this._config && this._config.animations; return a === "full" || a === true ? "full" : a === "off" || a === false ? "off" : "auto"; }
+  /** Une icône s'anime (classe anim) : toujours en mode « full » ; en mode « auto », si son mouvement est utile (ventilateur, lave-linge, vent, pluie…)
+   *  ou pendant quelques secondes après un changement d'état ; sinon elle garde sa pose allumée, sans redessin permanent. Le survol l'anime aussi. */
+  _anim(el, d) {
+    const st = this._hass.states[d.entity], sig = st ? st.state : "", ps = (this._ps = this._ps || {}), au = (this._au = this._au || {});
+    if (d.id in ps && ps[d.id] !== sig && this._amode() === "auto") { au[d.id] = Date.now() + 6000; if (!this._at) this._at = setTimeout(() => this._animSweep(), 6100); }
+    ps[d.id] = sig;
+    this._animSet(el, d, Date.now());
+  }
+  _animSet(el, d, now) {
+    const M = this._amode(), cont = d.kind === "w" ? !!el._cont : el.classList.contains("act") && !!CONT[d.ik];
+    el.classList.toggle("anim", M === "full" || (M === "auto" && (cont || now < ((this._au || {})[d.id] || 0))));
+  }
+  _animSweep() {
+    this._at = 0; const now = Date.now();
+    Object.values(this._mk || {}).forEach(({ el, d }) => { if (d.kind !== "l") this._animSet(el, d, now); });
+    const rem = Object.values(this._au || {}).filter((t) => t > now);
+    if (rem.length) this._at = setTimeout(() => this._animSweep(), Math.min(...rem) - now + 50);
   }
   _act(m, d, s) {
     const st = this._hass.states[d.entity];
@@ -680,11 +747,14 @@ class PlanMaisonCard extends HTMLElement {
       const s = this._stateOf(d);
       el.classList.toggle("na", s.c === "na"); el.classList.toggle("on", s.c === "on"); el.classList.toggle("warn", s.c === "warn");
       if (d.kind === "w") this._wgUpd(el, d); else if (d.kind === "l") el.textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); else { this._act(el, d, s); if (d.val) el.querySelector(".vb").textContent = s.c === "na" ? "–" : this._fmt(this._hass.states[d.entity]); }
+      if (d.kind !== "l") this._anim(el, d);
       const h = this._hp(d), hl = h && s.c !== "na" ? h.level : "";
       el.classList.toggle("h-warn", hl === "warn"); el.classList.toggle("h-bad", hl === "bad");
       el.title = `${this._nm(d)} : ${s.t}` + (h ? `\nÉtat général : ${h.label}${h.reasons.length ? "\n" + h.reasons.slice(0, 4).join("\n") : ""}\n(appui long : fiche santé)` : "");
     });
-    if (this._lg) Object.entries(this._lg).forEach(([e, gs]) => gs.forEach((g) => g.classList.toggle("lit", (this._hass.states[e] || {}).state === "on")));
+    let lit = false;
+    if (this._lg) Object.entries(this._lg).forEach(([e, gs]) => { const on = (this._hass.states[e] || {}).state === "on"; lit = lit || on; gs.forEach((g) => g.classList.toggle("lit", on)); });
+    this.$("glw").classList.toggle("on", lit);
   }
 
   /* ---------- panneau latéral ---------- */
@@ -763,7 +833,7 @@ class PlanMaisonCard extends HTMLElement {
     const rooms = this._model.rooms, spots = this._spots();
     if (this._mode === "walls") {
       const rows = rooms.map((r) => { const a = G.area(this._P[r.id]), t = r.area, dlt = t != null ? a - t : null, cls = dlt == null ? "" : Math.abs(dlt) < 0.25 ? "ok" : "off"; return `<tr><td>${esc(this._rname(r))}</td><td class="n">${fr(a, 1)}</td><td class="n">${t ?? "–"}</td><td class="n ${cls}">${dlt == null ? "" : Math.abs(dlt) < 0.05 ? "0" : (dlt > 0 ? "+" : "−") + fr(Math.abs(dlt), 1)}</td></tr>`; }).join("");
-      p.innerHTML = `<div><div class="eyebrow">Mode murs</div><h2>Cloisons et surfaces</h2></div><p class="muted">Chaque poignée bleue déplace une cloison entière ; les cloisons voisines sont poussées si besoin. « Cote » = surface indiquée dans la configuration.</p>
+      p._h = null; p.innerHTML = `<div><div class="eyebrow">Mode murs</div><h2>Cloisons et surfaces</h2></div><p class="muted">Chaque poignée bleue déplace une cloison entière ; les cloisons voisines sont poussées si besoin. « Cote » = surface indiquée dans la configuration.</p>
         <table><thead><tr><th>Pièce</th><th style="text-align:right">m²</th><th style="text-align:right">Cote</th><th style="text-align:right">Écart</th></tr></thead><tbody>${rows}</tbody></table>`;
       return;
     }
@@ -778,12 +848,16 @@ class PlanMaisonCard extends HTMLElement {
         if (rd.length) extra = `<div class="readings">${rd.map((d) => { const st = this._hass.states[d.entity]; return `<div class="rd"><div class="k">${(st && st.attributes.device_class === "humidity") || d.wg === "hum" ? "Humidité" : "Température"}</div><div class="v">${esc(this._fmt(st))}</div></div>`; }).join("")}</div>`;
         if (r.kind === "todo") extra += '<p class="muted">Espace dont l\'usage reste à préciser.</p>';
       } else head = `<div class="eyebrow">Extérieur</div><h2>${esc(spots[f] || f)}</h2>`;
-      p.innerHTML = `<button class="btn" id="back" style="align-self:flex-start">← Vue d'ensemble</button><div>${head}</div>${extra}<h3>Équipements</h3>${this._devList(devs)}`;
+      const html = `<button class="btn" id="back" style="align-self:flex-start">← Vue d'ensemble</button><div>${head}</div>${extra}<h3>Équipements</h3>${this._devList(devs)}`;
+      if (p._h === html) return; // rien n'a changé : pas de reconstruction (ni de survol perdu)
+      p._h = p.innerHTML = html;
     } else {
       const w = (this._w = this._watch()), all = this._devs(), cnt = (id) => this._devsAt(id).length;
-      p.innerHTML = `<h3>À regarder</h3><ul class="watch">${w.length ? w.map(([c, t, d, x], i) => `<li><span class="bar ${c}"></span><div><div class="t">${esc(t)}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div>${x && x.e ? `<button class="wx" data-w="${i}" title="Masquer cette alerte (ne plus la signaler)">✕</button>` : ""}</li>`).join("") : '<li><span class="bar ok"></span><div><div class="t">Rien à signaler</div></div></li>'}${Object.keys(this._L.wMute || {}).length ? `<li class="wmuted"><span></span><div>${Object.keys(this._L.wMute).length} alerte${Object.keys(this._L.wMute).length > 1 ? "s masquées" : " masquée"} · <button class="lnk" id="wshow">Réafficher</button></div></li>` : ""}</ul>
+      const html = `<h3>À regarder</h3><ul class="watch">${w.length ? w.map(([c, t, d, x], i) => `<li><span class="bar ${c}"></span><div><div class="t">${esc(t)}</div>${d ? `<div class="d">${esc(d)}</div>` : ""}</div>${x && x.e ? `<button class="wx" data-w="${i}" title="Masquer cette alerte (ne plus la signaler)">✕</button>` : ""}</li>`).join("") : '<li><span class="bar ok"></span><div><div class="t">Rien à signaler</div></div></li>'}${Object.keys(this._L.wMute || {}).length ? `<li class="wmuted"><span></span><div>${Object.keys(this._L.wMute).length} alerte${Object.keys(this._L.wMute).length > 1 ? "s masquées" : " masquée"} · <button class="lnk" id="wshow">Réafficher</button></div></li>` : ""}</ul>
         ${this._config.panel_rooms ? `<h3>Pièces et extérieur</h3><div class="rooms">${rooms.map((r) => `<button class="rl" data-go="${esc(r.id)}"><span>${esc(this._rname(r))}</span><span class="c">${cnt(r.id) || "–"}</span></button>`).join("")}
         ${Object.keys(spots).map((k) => `<button class="rl" data-go="${esc(k)}"><span>${esc(spots[k])}</span><span class="c">${cnt(k) || "–"}</span></button>`).join("")}</div>` : ""}`;
+      if (p._h === html) return;
+      p._h = p.innerHTML = html;
     }
     this._wire(p);
     if (!f && this._w) this._wireWatch(p, this._w);

@@ -2,6 +2,17 @@
 
 **English** · [Français](CHANGELOG.fr.md)
 
+## 1.11.0
+
+- Much lighter on the browser (Safari especially). Measured on the example plan: main-thread work goes from about 40 % of a core to almost nothing.
+  - Only motion that means something runs continuously: fan, heat pump, purifier, washing machine, dishwasher, vacuum, sprinkler, tap, valve, EV charger, pool, anemometer (with wind), rain gauge (while raining) and string lights. Other icons (lights, servers, cameras…) keep their "on" colours and animate for 6 seconds after a change of state, or on hover. Furniture no longer moves.
+  - String lights: the glow and the halo are drawn in separate layers fitted to the string lights; the twinkling only changes the opacity of these layers (done by the graphics card) instead of redrawing the whole plan and its blurs at every frame.
+  - The card only redraws when one of its entities changes (placed devices and their Home Assistant device, banner, alert rules, batteries, updates), instead of at every state change in the house; the overview is refreshed at most twice a second and only when its content changes.
+  - Animations pause when the card is off screen.
+  - The device-health ring and the "live" dot no longer pulse continuously (they still do with `animations: full`).
+- New `animations` option (editor: Settings, « Animations »): `auto` (default), `full` (everything animated continuously, as before) or `off`.
+- The Home Assistant server is not affected by any of this: the card runs entirely in the browser.
+
 ## 1.10.3
 
 - Documentation in English (README and changelog); the French versions are kept in `README.fr.md` and `CHANGELOG.fr.md`.

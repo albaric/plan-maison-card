@@ -22,7 +22,8 @@ You draw the plan with the mouse in a visual editor (or write it in YAML), then 
 - **String lights** drawn on the plan, which glow (halo, twinkling bulbs) when their entity is on; a click switches them.
 - **Device health**: for servers, NAS, routers, Zigbee coordinators or any field device, the card gathers all the entities of the Home Assistant device (connectivity, CPU, memory, disk, temperature, battery, signal, last seen, updates…) and shows an overall status (see below).
 - **Banner** of tiles (weather or any sensor) and a **watch list** panel (« À regarder »): unavailable devices, open doors, low batteries, updates, device health issues, plus your own rules.
-- Light and dark themes (follows Home Assistant); animations are turned off when the system asks for reduced motion.
+- Light and dark themes (follows Home Assistant).
+- **Light on the browser** by default: only motion that means something runs continuously (fan, washing machine, wind, rain, string lights); other icons animate for a few seconds after a change of state or on hover, then keep their "on" look. Animations pause when the card is off screen, and are turned off when the system asks for reduced motion. The card only redraws when one of its own entities changes. See `animations`.
 
 Layout changes made with the mouse on the card are saved **per Home Assistant user** (`frontend/user_data` storage). They do not touch the YAML configuration until you integrate or export them.
 
@@ -117,6 +118,7 @@ rooms:
 | `layout_key` | `plan_maison_<title>` | Storage key for the per-user layout. Two cards with the same key share their layout. |
 | `view` | computed | Visible frame `[x, y, width, height]` in metres. |
 | `theme` | `auto` | `auto`, `light` or `dark`. |
+| `animations` | `auto` | `auto` (economical, see above), `full` (every icon, the furniture and the status dot animate continuously, as before 1.11) or `off` (no animation at all). |
 | `fonts` | `true` | `false` does not load the Google fonts (Barlow Condensed, Source Sans 3, JetBrains Mono). |
 | `panel` | `true` | `false` hides the overview panel (the watch list next to the plan). |
 | `panel_width` | auto | Width of the overview panel in pixels (200 to 700). On the card you can also drag the panel's left edge: that width is remembered per user; double-click to go back to the configured value. |

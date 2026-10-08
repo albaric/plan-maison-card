@@ -19,7 +19,8 @@ Tout se règle en YAML, puis s'ajuste à la souris directement sur le plan : clo
 - **Mobilier** illustré, un dessin par meuble : 77 meubles rangés par pièce (salon, repas, chambre, bureau, cuisine, salle de bain, jardin), avec leurs détails (vaisselle, livres, serviettes, canard dans le bain, potager, piscine, pergola en glycine…). Plans de travail, piscine, potager, haie… se redimensionnent ; canapés, lits, tapis… changent de couleur.
 - **Guirlandes lumineuses** dessinées sur le plan, qui s'allument avec leur entité.
 - **Bandeau** de tuiles (météo ou autres capteurs) et panneau **« À regarder »** : équipements indisponibles, portes ouvertes, piles faibles, mises à jour, plus tes propres règles.
-- Thème clair et sombre (suit Home Assistant), animations coupées si le système demande moins de mouvement.
+- Thème clair et sombre (suit Home Assistant).
+- **Économe pour le navigateur** par défaut : seul ce dont le mouvement a un sens s'anime en continu (ventilateur, lave-linge, vent, pluie, guirlandes) ; les autres icônes s'animent quelques secondes après un changement d'état ou au survol, puis gardent leur aspect allumé. Les animations s'arrêtent quand la carte est hors de l'écran, et sont coupées si le système demande moins de mouvement. La carte ne se redessine que si une de ses entités change. Voir `animations`.
 
 La disposition modifiée à la souris est enregistrée **par utilisateur Home Assistant** (stockage `frontend/user_data`). Elle ne touche pas à la configuration YAML tant que tu ne l'exportes pas.
 
@@ -116,6 +117,7 @@ rooms:
 | `layout_key` | `plan_maison_<titre>` | Clé de stockage de la disposition par utilisateur. Deux cartes avec la même clé partagent leur disposition. |
 | `view` | calculé | Cadre visible `[x, y, largeur, hauteur]` en mètres. |
 | `theme` | `auto` | `auto`, `light` ou `dark`. |
+| `animations` | `auto` | `auto` (économe, voir plus haut), `full` (toutes les icônes, le mobilier et le voyant « en direct » animés en continu, comme avant la 1.11) ou `off` (aucune animation). |
 | `fonts` | `true` | `false` n'importe pas les polices Google (Barlow Condensed, Source Sans 3, JetBrains Mono). |
 | `panel` | `true` | `false` masque la vue d'ensemble (la liste « À regarder » à droite du plan). |
 | `panel_width` | auto | Largeur de la vue d'ensemble en pixels (200 à 700). Sur la carte, on peut aussi tirer le bord gauche du panneau : ce réglage est mémorisé pour chaque utilisateur, double-clic pour revenir à la valeur de la config. |

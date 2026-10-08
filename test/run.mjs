@@ -127,14 +127,16 @@ const check = (name, ok, info = "") => { results.push([ok ? "OK " : "KO ", name,
   await c.evaluate((el) => el.shadowRoot.querySelector("#wshow").click()); await p.waitForTimeout(200);
   const t2 = await c.evaluate(titles);
   const link = await c.evaluate(async (el) => {
-    const h = el._hass; h.states["binary_sensor.coordinateur_zigbee_internet"] = { entity_id: "binary_sensor.coordinateur_zigbee_internet", state: "on", attributes: { device_class: "connectivity", friendly_name: "SLZB-06 Internet" } };
-    h.entities = Object.assign({}, h.entities, { "binary_sensor.coordinateur_zigbee_internet": { entity_id: "binary_sensor.coordinateur_zigbee_internet", device_id: "slz", entity_category: "diagnostic" } });
-    el.hass = Object.assign({}, h); await new Promise((r) => setTimeout(r, 500));
+    // comme Home Assistant : nouveaux objets à chaque changement (jamais de modification sur place)
+    const h0 = el._hass, h = Object.assign({}, h0, { states: Object.assign({}, h0.states) });
+    h.states["binary_sensor.coordinateur_zigbee_internet"] = { entity_id: "binary_sensor.coordinateur_zigbee_internet", state: "on", attributes: { device_class: "connectivity", friendly_name: "SLZB-06 Internet" } };
+    h.entities = Object.assign({}, h0.entities, { "binary_sensor.coordinateur_zigbee_internet": { entity_id: "binary_sensor.coordinateur_zigbee_internet", device_id: "slz", entity_category: "diagnostic" } });
+    el.hass = h; await new Promise((r) => setTimeout(r, 500));
     const hp = el._hp(el._devs().find((d) => d.id === "zigbee")); return { level: hp.level, eth: hp.metrics.find((m) => m.eid.endsWith("_ethernet")).text };
   });
   check("« À regarder » : alerte masquée avec ✕ (mémorisé)", t0.some((x) => /Porte d'entrée/.test(x)) && !t1.t.some((x) => /Porte d'entrée/.test(x)) && /1 alerte masquée/.test(t1.muted) && t1.saved, JSON.stringify(t1));
   check("« À regarder » : alertes masquées réaffichées", t2.some((x) => /Porte d'entrée/.test(x)), t2);
-  check("santé : Ethernet débranché mais Internet actif = « Non utilisé »", link.level === "ok" && link.eth === "Non utilisé", link);
+  check("santé : Ethernet débranché mais Internet actif = « Non utilisé »", link.level === "ok" && link.eth === "Non utilisé", JSON.stringify(link));
   check("masquage : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
@@ -159,6 +161,48 @@ for (const cfg of ["complete", "simple", "stub"]) {
   fs.writeFileSync(`${OUT}/${cfg}_export.yaml`, y);
   await p.screenshot({ path: `${OUT}/${cfg}_export.png` });
   check(`${cfg}: aucune erreur JS`, errs.length === 0, errs.join(" | "));
+  await p.close();
+}
+{ // sobriété : animations ciblées, redessin seulement si une entité de la carte change, lueurs des guirlandes en calques
+  const { p, errs, c } = await open("complete");
+  const r = await p.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const cfg = { title: "T", rooms: [{ name: "A", rect: [0, 0, 6, 4] }], devices: [
+      { id: "lamp", entity: "light.lampe_canape", icon: "lamp", x: 1, y: 1 },
+      { id: "fan", entity: "switch.multiprise_sejour", icon: "fan", x: 3, y: 1 },
+      { id: "wind", entity: "sensor.anemometre_vitesse_moyenne", x: 5, y: 1 }],
+      garlands: [{ entity: "switch.guirlande_pergola", points: [[0.5, 3], [5.5, 3]] }] };
+    card.setConfig(cfg); await wait(400);
+    const cls = (id) => card._mk[id].el.classList;
+    const out = { host: card.className };
+    out.lamp = cls("lamp").contains("act") && !cls("lamp").contains("anim"); // allumée mais immobile
+    out.fan = cls("fan").contains("anim");                                   // le ventilateur tourne
+    out.wind = cls("wind").contains("anim");                                  // l'anémomètre tourne (vent > 0)
+    const glw = card.shadowRoot.querySelector("#glw");
+    out.glw = { layers: glw.querySelectorAll("svg").length, on: glw.classList.contains("on"), lit: glw.querySelectorAll(".lights.lit").length, inPlan: card.shadowRoot.querySelectorAll("#svg .glow,#svg .halo").length };
+    // changement d'état : animation brève puis retour au repos
+    let n = 0; const orig = card._states.bind(card); card._states = () => { n++; orig(); };
+    const set = (e, v) => { const h = card._hass; card.hass = { ...h, states: { ...h.states, [e]: { ...(h.states[e] || { entity_id: e, attributes: {} }), state: v } } }; };
+    set("sensor.entite_sans_rapport", "42"); await wait(50); out.unrelated = n;
+    set("light.lampe_canape", "off"); await wait(50); set("light.lampe_canape", "on"); await wait(50);
+    out.related = n; out.lampAnim = cls("lamp").contains("anim");
+    card._au.lamp = Date.now() - 1; card._animSweep(); out.lampRest = !cls("lamp").contains("anim");
+    // modes
+    card.setConfig({ ...cfg, animations: "full" }); await wait(300); out.full = card.classList.contains("anim-full") && cls("lamp").contains("anim");
+    card.setConfig({ ...cfg, animations: "off" }); await wait(300); out.off = card.classList.contains("anim-off") && !cls("fan").contains("anim") && getComputedStyle(card._mk.fan.el.querySelector(".ico .bl") || card._mk.fan.el).animationName === "none";
+    // hors écran : animations suspendues
+    card.setConfig(cfg); await wait(300);
+    document.body.style.paddingTop = "6000px"; await wait(400); out.still = card.shadowRoot.querySelector("#stage").classList.contains("still");
+    document.body.style.paddingTop = ""; await wait(400); out.back = !card.shadowRoot.querySelector("#stage").classList.contains("still");
+    return out;
+  });
+  check("sobriété : lampe allumée immobile, ventilateur et anémomètre animés", r.lamp && r.fan && r.wind, JSON.stringify(r));
+  check("sobriété : changement sans rapport ignoré, changement utile redessiné", r.unrelated === 0 && r.related >= 2, JSON.stringify({ u: r.unrelated, rel: r.related }));
+  check("sobriété : animation brève après un changement d'état", r.lampAnim && r.lampRest, JSON.stringify(r));
+  check("sobriété : modes « full » et « off »", r.full && r.off, JSON.stringify({ full: r.full, off: r.off }));
+  check("sobriété : lueurs des guirlandes dans des calques à part", r.glw.layers === 4 && r.glw.on && r.glw.lit === 4 && r.glw.inPlan === 0, JSON.stringify(r.glw));
+  check("sobriété : animations suspendues hors écran", r.still && r.back, JSON.stringify({ still: r.still, back: r.back }));
+  check("sobriété : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
 { // sombre + bibliothèque d'icônes

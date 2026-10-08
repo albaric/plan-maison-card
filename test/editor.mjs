@@ -200,6 +200,16 @@ const setInput = (p, sel, v) => p.evaluate(([sel, v]) => { const i = ed.shadowRo
   await p.screenshot({ path: `${OUT}/ed_illustre.png` });
   await p.close();
 }
+{ // réglage des animations
+  const { p, errs } = await open("cfg=complete");
+  await p.evaluate(() => ed.shadowRoot.querySelector('#tabs [data-t=set]').click()); await p.waitForTimeout(200);
+  const sel = (v) => p.evaluate((v) => { const i = ed.shadowRoot.querySelector("#an"); i.value = v; i.dispatchEvent(new Event("change")); }, v);
+  await sel("off"); await p.waitForTimeout(250); const a = (await cfg(p)).animations, offc = await p.evaluate(() => card.classList.contains("anim-off"));
+  await sel(""); await p.waitForTimeout(250); const b2 = (await cfg(p)).animations;
+  check("réglages : animations aucune / économes", a === "off" && offc && b2 === undefined, { a, offc, b2 });
+  check("réglages animations : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 await b.close();
 results.forEach((r) => console.log(r.join(" ")));
 process.exit(results.some((r) => r[0] === "KO ") ? 1 : 0);
