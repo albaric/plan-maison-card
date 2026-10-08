@@ -1,301 +1,322 @@
 # Plan Maison Card
 
-[![HACS](https://img.shields.io/badge/HACS-d%C3%A9p%C3%B4t%20personnalis%C3%A9-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/) [![Validation](https://github.com/albaric/plan-maison-card/actions/workflows/validate.yml/badge.svg)](https://github.com/albaric/plan-maison-card/actions/workflows/validate.yml)
+[![HACS](https://img.shields.io/badge/HACS-custom%20repository-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories/) [![Validation](https://github.com/albaric/plan-maison-card/actions/workflows/validate.yml/badge.svg)](https://github.com/albaric/plan-maison-card/actions/workflows/validate.yml)
 
-Carte Lovelace pour Home Assistant qui affiche **le plan de ta maison** : pièces, cloisons, portes et fenêtres, jardin, mobilier, et tes équipements sous forme de pastilles animées que tu peux allumer, éteindre ou consulter d'un geste.
+**English** · [Français](README.fr.md)
 
-Tout se règle en YAML, puis s'ajuste à la souris directement sur le plan : cloisons déplaçables, équipements et meubles glissés à leur place, icônes choisies dans une bibliothèque. Un bouton **Exporter** produit la configuration complète, prête à recoller ou à partager sur un autre Home Assistant.
+A Lovelace card for Home Assistant that shows **the floor plan of your home**: rooms, walls, doors and windows, garden, furniture, and your devices as animated markers you can switch on, switch off or inspect with a tap.
 
-![Aperçu](docs/apercu.png)
+You draw the plan with the mouse in a visual editor (or write it in YAML), then fine-tune it directly on the card: drag walls, drop devices and furniture where they belong, pick icons from a library. An **Export** button produces the complete configuration, ready to paste back or to share with another Home Assistant.
 
-## Ce que fait la carte
+![Preview](docs/apercu.png)
 
-- **Plan vectoriel** : les pièces sont des polygones en mètres. Les murs sont déduits des pièces : un bord partagé devient une cloison, un bord seul devient la façade (trait épais). Portes, passages et fenêtres découpent ou habillent les murs.
-- **Mode Murs** : chaque cloison a une poignée. Les pièces, portes et fenêtres qui en dépendent suivent, et les cloisons voisines sont poussées si besoin. Un tableau compare les surfaces calculées à celles que tu as indiquées.
-- **Équipements animés** : 50 icônes animées en couleur, rangées par familles (lumière, ouvrants, sécurité, chauffage, eau, cuisine, multimédia, réseau…) : l'ampoule rayonne, la porte s'ouvre, l'aspirateur roule, le robinet coule, la caméra balaie ; un halo de la couleur de la famille signale les appareils actifs. L'icône est devinée d'après l'entité, et tu peux en changer en touchant la pastille en mode Équipements.
-- **Widgets météo** sur le plan : thermomètre, anémomètre (vitesse de rotation liée au vent), pluviomètre (le bocal se remplit), baromètre (aiguille), hygromètre (goutte qui se remplit selon l'humidité, couleur de sec à humide, bulles au-delà de 65 %). Ils sont choisis automatiquement selon la classe du capteur.
-- **Mobilier** illustré, un dessin par meuble : 77 meubles rangés par pièce (salon, repas, chambre, bureau, cuisine, salle de bain, jardin), avec leurs détails (vaisselle, livres, serviettes, canard dans le bain, potager, piscine, pergola en glycine…). Plans de travail, piscine, potager, haie… se redimensionnent ; canapés, lits, tapis… changent de couleur.
-- **Guirlandes lumineuses** dessinées sur le plan, qui s'allument avec leur entité.
-- **Bandeau** de tuiles (météo ou autres capteurs) et panneau **« À regarder »** : équipements indisponibles, portes ouvertes, piles faibles, mises à jour, plus tes propres règles.
-- Thème clair et sombre (suit Home Assistant), animations coupées si le système demande moins de mouvement.
+> **Language.** The card's interface is currently in French. This documentation quotes the French labels you will see on screen, with their English meaning.
 
-La disposition modifiée à la souris est enregistrée **par utilisateur Home Assistant** (stockage `frontend/user_data`). Elle ne touche pas à la configuration YAML tant que tu ne l'exportes pas.
+## Features
 
-L'interface de la carte est en français.
+- **Vector floor plan**: rooms are polygons in metres. Walls are derived from the rooms: a shared edge becomes an interior wall, a free edge becomes an exterior wall (thick line). Doors, passages and windows cut through or decorate the walls.
+- **Walls mode** (« Murs »): every wall has a handle. Rooms, doors and windows attached to it follow, and neighbouring walls are pushed when needed. A table compares the computed areas with the ones you declared.
+- **Animated devices**: 50 colourful animated icons grouped by family (lighting, openings, security, heating, water, kitchen, media, network…): the bulb glows, the door swings open, the vacuum moves, the tap runs, the camera pans; a halo in the family colour marks active devices. The icon is guessed from the entity, and you can change it by tapping the marker in Devices mode.
+- **Weather widgets** on the plan: thermometer (colour follows the temperature), anemometer (spins with the wind), rain gauge (the jar fills up), barometer (needle), hygrometer (a drop that fills with humidity, from dry orange to humid blue, bubbles above 65 %). They are picked automatically from the sensor's device class.
+- **Illustrated furniture**, one drawing per piece: 77 items sorted by room (living room, dining, bedroom, office, kitchen, bathroom, garden), with their details (tableware, books, towels, a rubber duck in the bath, vegetable patch, pool, wisteria pergola…). Worktops, pool, vegetable patch, hedge… can be resized; sofas, beds, rugs… come in 14 colours.
+- **String lights** drawn on the plan, which glow (halo, twinkling bulbs) when their entity is on; a click switches them.
+- **Device health**: for servers, NAS, routers, Zigbee coordinators or any field device, the card gathers all the entities of the Home Assistant device (connectivity, CPU, memory, disk, temperature, battery, signal, last seen, updates…) and shows an overall status (see below).
+- **Banner** of tiles (weather or any sensor) and a **watch list** panel (« À regarder »): unavailable devices, open doors, low batteries, updates, device health issues, plus your own rules.
+- Light and dark themes (follows Home Assistant); animations are turned off when the system asks for reduced motion.
+
+Layout changes made with the mouse on the card are saved **per Home Assistant user** (`frontend/user_data` storage). They do not touch the YAML configuration until you integrate or export them.
 
 ## Installation
 
-### Avec HACS (recommandé)
+### With HACS (recommended)
 
-1. HACS → menu ⋮ → **Dépôts personnalisés**.
-2. Ajoute l'URL `https://github.com/albaric/plan-maison-card`, catégorie **Dashboard** (ou « Lovelace » selon la version de HACS).
-3. Cherche **Plan Maison Card**, installe-la, puis recharge le navigateur (Ctrl+Maj+R).
+1. HACS → ⋮ menu → **Custom repositories**.
+2. Add the URL `https://github.com/albaric/plan-maison-card`, category **Dashboard** (or "Lovelace", depending on your HACS version).
+3. Search for **Plan Maison Card**, install it, then reload your browser (Ctrl+Shift+R, or Cmd+Shift+R on a Mac).
 
-HACS déclare la ressource `/hacsfiles/plan-maison-card/plan-maison-card.js` tout seul.
+HACS registers the resource `/hacsfiles/plan-maison-card/plan-maison-card.js` automatically.
 
-### À la main
+### Manually
 
-1. Télécharge `plan-maison-card.js` depuis la [dernière version](https://github.com/albaric/plan-maison-card/releases/latest) et copie-le dans `/config/www/`.
-2. Paramètres → Tableaux de bord → ⋮ → **Ressources** → Ajouter : URL `/local/plan-maison-card.js`, type **Module JavaScript**.
-3. Recharge le navigateur.
+1. Download `plan-maison-card.js` from the [latest release](https://github.com/albaric/plan-maison-card/releases/latest) and copy it to `/config/www/`.
+2. Settings → Dashboards → ⋮ → **Resources** → Add: URL `/local/plan-maison-card.js`, type **JavaScript module**.
+3. Reload your browser.
 
-## Démarrage rapide : dessiner son plan à la souris
+## Quick start: draw your plan with the mouse
 
-1. Tableau de bord → crayon (Modifier) → **Ajouter une carte** → **Plan maison**.
-2. L'**éditeur visuel** s'ouvre à gauche, l'aperçu à droite. Il part d'un petit plan d'exemple : garde-le, modifie-le ou clique sur **Tout effacer**.
-3. Onglet **Plan** :
-   - outil **Pièce** : fais glisser pour dessiner une pièce rectangulaire. Les bords s'aimantent aux murs existants, les dimensions s'affichent en mètres. Donne-lui un nom et un type dans le panneau du dessous (ou tape ses cotes exactes) ;
-   - outil **Forme libre** : clique pour poser chaque coin d'une pièce qui n'est pas rectangulaire (L, pan coupé, bow-window…), puis clique sur le premier coin, double-clique ou appuie sur Entrée pour la fermer. Les traits s'alignent d'eux-mêmes à l'horizontale et à la verticale ;
-   - outils **Porte**, **Fenêtre**, **Ouverture** : touche un mur pour l'y poser, puis règle largeur, arc d'ouverture et libellé ;
-   - outil **Extérieur** : terrasse, pergola, abri, piscine, potager, allée ;
-   - outil **Guirlande** : clique les points d'accroche (zigzag sous une pergola, ligne le long d'une terrasse…), double-clique pour terminer, puis choisis l'interrupteur qui l'allume et le type d'ampoules (multicolores ou blanc chaud). Sur la carte, elle s'illumine quand l'appareil est allumé et un clic l'allume ou l'éteint ;
-   - outil **Sélection** : glisse une pièce, un coin (rond) ou un mur. Déplacer un mur commun déplace les deux pièces et ses portes. Pour changer la forme d'une pièce, touche le **« + »** au milieu d'un de ses murs et tire le nouveau coin ; touche un coin pour saisir sa position au centimètre ou le supprimer. Molette pour zoomer, glisser le fond pour déplacer la vue, Ctrl+Z pour annuler ;
-   - **Ajouter un meuble…** ouvre la bibliothèque ; un meuble se glisse, R le pivote, Suppr l'enlève.
-4. Onglet **Équipements** : tape le nom d'un appareil (« lampe salon », « porte entrée »…) et choisis-le dans la liste, sans avoir à connaître son identifiant technique. Il apparaît au centre du plan : glisse la pastille à sa place et touche-la pour choisir son icône animée.
-5. Onglets **Bandeau** (tuiles météo ou capteurs) et **Réglages** (titre, thème, jardin, alertes).
-6. **Enregistrer**.
+1. Dashboard → pencil (Edit) → **Add card** → **Plan maison**.
+2. The **visual editor** opens on the left, the preview on the right. It starts from a small sample plan: keep it, edit it, or click « Tout effacer » (clear all).
+3. **Plan** tab:
+   - **Room** tool (« Pièce »): drag to draw a rectangular room. Edges snap to existing walls and dimensions are shown in metres. Give it a name and a type in the panel below (or type its exact dimensions);
+   - **Free shape** tool (« Forme libre »): click to place each corner of a non-rectangular room (L shape, cut corner, bay window…), then click the first corner, double-click or press Enter to close it. Segments snap to horizontal and vertical;
+   - **Door**, **Window**, **Opening** tools (« Porte », « Fenêtre », « Ouverture »): tap a wall to place one, then set its width, swing and label;
+   - **Outdoor** tool (« Extérieur »): terrace, pergola, shed, pool, vegetable patch, path;
+   - **String lights** tool (« Guirlande »): click the anchor points (zigzag under a pergola, line along a terrace…), double-click to finish, then choose the switch that powers it and the bulbs (multicolour or warm white). On the card it lights up when the device is on, and a click toggles it;
+   - **Select** tool (« Sélection »): drag a room, a corner (round handle) or a wall. Moving a shared wall moves both rooms and their doors. To change a room's shape, tap the **"+"** in the middle of one of its walls and drag the new corner; tap a corner to type its exact position or delete it. Mouse wheel to zoom, drag the background to pan, Ctrl+Z to undo;
+   - « Ajouter un meuble… » (add furniture) opens the library; drag a piece, R rotates it, Delete removes it. Resizable pieces have width and depth fields, fabrics have colour swatches.
+4. **Devices** tab (« Équipements »): type a device name ("living room lamp", "front door"…) and pick it from the list — no need to know its entity ID. It appears in the middle of the plan: drag the marker into place and tap it to choose its animated icon.
+5. **Banner** (« Bandeau », weather or sensor tiles) and **Settings** (« Réglages »: title, theme, garden, overview panel, alerts) tabs.
+6. **Save**.
 
-Les murs se tracent tout seuls : épais en façade, fins entre deux pièces.
+Walls draw themselves: thick on the outside, thin between two rooms.
 
-![Éditeur visuel](docs/editeur.png)
+![Visual editor](docs/editeur.png)
 
-Tout reste aussi faisable en YAML (bouton « Afficher l'éditeur de code » de Home Assistant) : pars de [`examples/simple.yaml`](examples/simple.yaml), ou de l'exemple complet [`examples/complete.yaml`](examples/complete.yaml) (11 pièces, cloisons nommées, 38 équipements, bandeau météo, règles d'alerte). Un plan à cloisons nommées reste modifiable dans l'éditeur visuel : au premier déplacement de mur, il est converti en cotes simples.
+Everything can also be written in YAML (Home Assistant's "Show code editor" button): start from [`examples/simple.yaml`](examples/simple.yaml), or the full example [`examples/complete.yaml`](examples/complete.yaml) (11 rooms, named walls, 38 devices, weather banner, alert rules, garden). A plan using named walls can still be edited in the visual editor: on the first wall move it is converted to plain coordinates.
 
-La carte occupe toute la largeur. Dans une vue « Panneau » ou « Sections », elle s'adapte ; sous 860 px de large, le panneau latéral passe sous le plan.
+The card uses the full available width. In a "Panel" or "Sections" view it adapts; below 860 px wide, the side panel moves under the plan and tapping a room opens its details directly on the plan.
 
 ```yaml
 type: custom:plan-maison-card
-title: Ma maison
+title: My home
 rooms:
-  - {name: Séjour, kind: jour, rect: [0, 0, 6, 4.5]}
-  - {name: Cuisine, kind: jour, rect: [6, 0, 10, 4.5]}
-  - {name: Chambre, kind: nuit, rect: [0, 4.5, 10, 8]}
+  - {name: Living room, kind: living, rect: [0, 0, 6, 4.5]}
+  - {name: Kitchen, kind: living, rect: [6, 0, 10, 4.5]}
+  - {name: Bedroom, kind: bedroom, rect: [0, 4.5, 10, 8]}
 openings:
-  - {type: door, from: [2, 0], to: [2.9, 0], swing: down, label: Entrée}
+  - {type: door, from: [2, 0], to: [2.9, 0], swing: down, label: Entrance}
   - {type: open, from: [6, 1], to: [6, 3.5]}
   - {type: door, from: [4, 4.5], to: [4.8, 4.5]}
   - {type: window, from: [7, 0], to: [9, 0]}
 devices:
-  - {entity: light.salon, x: 3, y: 2}
-  - {entity: sensor.salon_temperature, x: 1, y: 3.5}
+  - {entity: light.living_room, x: 3, y: 2}
+  - {entity: sensor.living_room_temperature, x: 1, y: 3.5}
 ```
 
-## Coordonnées
+## Coordinates
 
-- Toutes les cotes sont en **mètres**. L'origine est où tu veux (en pratique le coin nord-ouest de la maison). **x** va vers la droite (est), **y** vers le bas (sud).
-- Une coordonnée peut être un nombre (`4.1`) ou une **référence à un axe** (`xS`), éventuellement décalée (`xS+0.5`, `xC1-1.1`).
-- Le pas de déplacement à la souris est de 5 cm.
+- All dimensions are in **metres**. The origin is wherever you like (in practice the north-west corner of the house). **x** goes right (east), **y** goes down (south).
+- A coordinate can be a number (`4.1`) or a **reference to an axis** (`xS`), optionally offset (`xS+0.5`, `xC1-1.1`).
+- Mouse moves snap to 5 cm.
 
-### Axes (cloisons déplaçables)
+### Axes (movable walls)
 
-Deux façons de faire :
+Two ways to work:
 
-- **Automatique** (si tu ne déclares pas `axes`) : chaque valeur de x ou de y utilisée par les sommets des pièces devient une cloison déplaçable. Toutes les pièces qui partagent cette valeur bougent ensemble, ainsi que les portes et fenêtres posées sur ce mur. C'est le plus simple pour démarrer.
-- **Nommée** : tu déclares des axes et tu les utilises dans les points. Cela permet d'avoir deux cloisons à la même cote mais indépendantes, d'ancrer une porte sur une cloison (`xC1-1.1`), ou de laisser la façade fixe (les nombres restent fixes).
+- **Automatic** (when you do not declare `axes`): every x or y value used by room vertices becomes a movable wall. All rooms sharing that value move together, along with the doors and windows on that wall. This is the simplest way to start.
+- **Named**: you declare axes and use them in the points. This lets you have two independent walls at the same coordinate, anchor a door to a wall (`xC1-1.1`), or keep the exterior fixed (plain numbers stay fixed).
 
 ```yaml
 axes:
-  xS: {value: 4.1, label: "Séjour | chambre 1"}   # label facultatif, sinon il est calculé
+  xS: {value: 4.1, label: "Living room | bedroom 1"}   # label optional, otherwise computed
   yD: 4
 rooms:
-  - {name: Séjour, points: [[0, 0], [xS, 0], [xS, yD], [0, yD]]}
+  - {name: Living room, points: [[0, 0], [xS, 0], [xS, yD], [0, yD]]}
 ```
 
-`auto_axes: true` force le mode automatique même quand des axes sont déclarés : les nombres deviennent alors eux aussi déplaçables.
+`auto_axes: true` forces automatic mode even when axes are declared: plain numbers then become movable too.
 
-## Référence de la configuration
+## Configuration reference
 
-### Général
+### General
 
-| Clé | Défaut | Rôle |
+| Key | Default | Purpose |
 |---|---|---|
-| `title` | `Maison` | Titre affiché en haut. |
-| `header` | `true` | `false` masque le titre et l'heure. |
-| `layout_key` | `plan_maison_<titre>` | Clé de stockage de la disposition par utilisateur. Deux cartes avec la même clé partagent leur disposition. |
-| `view` | calculé | Cadre visible `[x, y, largeur, hauteur]` en mètres. |
-| `theme` | `auto` | `auto`, `light` ou `dark`. |
-| `fonts` | `true` | `false` n'importe pas les polices Google (Barlow Condensed, Source Sans 3, JetBrains Mono). |
-| `panel` | `true` | `false` masque la vue d'ensemble (la liste « À regarder » à droite du plan). |
-| `panel_width` | auto | Largeur de la vue d'ensemble en pixels (200 à 700). Sur la carte, on peut aussi tirer le bord gauche du panneau : ce réglage est mémorisé pour chaque utilisateur, double-clic pour revenir à la valeur de la config. |
-| `panel_rooms` | `false` | `true` ajoute sous « À regarder » la liste des pièces et espaces extérieurs. |
+| `title` | `Maison` | Title shown at the top. |
+| `header` | `true` | `false` hides the title and clock. |
+| `layout_key` | `plan_maison_<title>` | Storage key for the per-user layout. Two cards with the same key share their layout. |
+| `view` | computed | Visible frame `[x, y, width, height]` in metres. |
+| `theme` | `auto` | `auto`, `light` or `dark`. |
+| `fonts` | `true` | `false` does not load the Google fonts (Barlow Condensed, Source Sans 3, JetBrains Mono). |
+| `panel` | `true` | `false` hides the overview panel (the watch list next to the plan). |
+| `panel_width` | auto | Width of the overview panel in pixels (200 to 700). On the card you can also drag the panel's left edge: that width is remembered per user; double-click to go back to the configured value. |
+| `panel_rooms` | `false` | `true` adds the list of rooms and outdoor areas under the watch list. |
 
-### `rooms` — pièces
+### `rooms`
 
-| Clé | Rôle |
+| Key | Purpose |
 |---|---|
-| `id` | Identifiant stable (conseillé : il sert pour la disposition enregistrée). |
-| `name` | Nom affiché. |
-| `kind` | Couleur de la pièce : `jour`, `nuit`, `eau`, `service`, `circ` (circulation), `todo` (hachuré). Synonymes anglais : `living`, `bedroom`, `bathroom`, `utility`, `hall`, `unknown`. |
-| `rect` | `[x1, y1, x2, y2]` pour une pièce rectangulaire… |
-| `points` | …ou la liste des sommets `[[x, y], …]` pour toute autre forme. |
-| `area` | Surface de référence en m² (celle du plan de l’architecte, par exemple) : elle s’affiche sur le plan à la place de la surface calculée, et le mode Murs compare les deux. |
-| `label` | Position du nom `[x, y]` ; sinon placée automatiquement en évitant meubles et pastilles. |
-| `label_size` | Hauteur maximale du nom en mètres. |
+| `id` | Stable identifier (recommended: the saved layout uses it). |
+| `name` | Displayed name. |
+| `kind` | Room colour: `living`, `bedroom`, `bathroom`, `utility`, `hall`, `unknown` (hatched). French equivalents: `jour`, `nuit`, `eau`, `service`, `circ`, `todo`. |
+| `rect` | `[x1, y1, x2, y2]` for a rectangular room… |
+| `points` | …or the list of vertices `[[x, y], …]` for any other shape. |
+| `area` | Reference area in m² (from the architect's plan, for example): it is displayed on the plan instead of the computed area, and Walls mode compares the two. |
+| `label` | Position of the name `[x, y]`; otherwise placed automatically, avoiding furniture and markers. |
+| `label_size` | Maximum height of the name in metres. |
 
-### `openings` — portes, passages, fenêtres
+### `openings` — doors, passages, windows
 
-`{type, from: [x, y], to: [x, y]}`, posés sur un mur (horizontal ou vertical).
+`{type, from: [x, y], to: [x, y]}`, placed on a wall (horizontal or vertical).
 
-| `type` | Rendu |
+| `type` | Rendering |
 |---|---|
-| `door` | Ouverture dans le mur. Avec `swing: up/down/left/right`, l'arc d'ouverture est dessiné (le battant part de `from`). `label` ajoute un texte côté extérieur. |
-| `passage` | Ouverture sans arc. |
-| `open` | Pas de mur entre deux pièces ; ligne pointillée sauf avec `dashed: false`. |
-| `window` | Fenêtre dessinée sur le mur. |
+| `door` | Gap in the wall. With `swing: up/down/left/right`, the door swing is drawn (the leaf starts at `from`). `label` adds a text on the outside. |
+| `passage` | Gap without a swing. |
+| `open` | No wall between two rooms; dotted line unless `dashed: false`. |
+| `window` | Window drawn on the wall. |
 
-### `zones` — extérieurs
+### `zones` — outdoor areas
 
-`{id, name, type, rect: [x1, y1, x2, y2]}`. Types : `deck` (terrasse, `pattern: tiles` ou `slats`, `posts: true` pour des poteaux de pergola), `shed` (abri), `patch`, `pool`, `gravel`. `show_size: true` affiche les dimensions.
+`{id, name, type, rect: [x1, y1, x2, y2]}`. Types: `deck` (terrace, `pattern: tiles` or `slats`, `posts: true` for pergola posts), `shed`, `patch` (flower bed, or vegetable patch when its name contains "potager"), `pool`, `gravel`. `show_size: true` displays the dimensions.
 
-### `garden` — jardin
+### `garden`
 
-`garden: false` supprime le jardin. Sinon :
+`garden: false` removes the garden. Otherwise:
 
 ```yaml
 garden:
-  label: Jardin
-  trees: [[8, -3.8, 1.6, t1], [-3.2, -0.6, 1.1, t2]]   # x, y, rayon, teinte t1/t2/t3
-  flowers: [[-4.4, 3.4, "#c9a3e6"]]                  # x, y, couleur
-  paths: [[[-2.4, -1], [0.8, -1.4]]]                 # tracés pointillés
+  label: Garden
+  trees: [[8, -3.8, 1.6, t1], [-3.2, -0.6, 1.1, t2]]   # x, y, radius, shade t1/t2/t3
+  flowers: [[-4.4, 3.4, "#c9a3e6"]]                  # x, y, colour
+  paths: [[[-2.4, -1], [0.8, -1.4]]]                 # dotted paths
 ```
 
-Sans `trees`, quelques arbres sont placés automatiquement autour de la maison.
+Without `trees`, a few trees are placed automatically around the house.
 
-### `garlands` — guirlandes lumineuses
+### `garlands` — string lights
 
 ```yaml
 garlands:
-  - entity: light.terrasse
-    name: Guinguette
+  - entity: light.terrace
+    name: Festoon lights
     points: [[0.4, 10.3], [2, 11.7], [3.6, 10.3]]
-    sag: 0.15          # flèche du câble entre deux points (m)
-    style: warm        # ampoules blanc chaud ; sinon multicolore
-    colors: ["#e5484d", "#3e7bfa"]   # ou une liste de couleurs
-    spacing: 0.33      # écart entre ampoules (m)
-    size: 0.11         # taille des ampoules (m)
+    sag: 0.15          # cable sag between two points (m)
+    style: warm        # warm white bulbs; multicolour otherwise
+    colors: ["#e5484d", "#3e7bfa"]   # or a list of colours
+    spacing: 0.33      # distance between bulbs (m)
+    size: 0.11         # bulb size (m)
 ```
 
-Un clic sur la guirlande allume ou éteint l'entité.
+A click on the string lights toggles the entity. In the side panel, string lights are listed in the room or terrace where they hang.
 
-### `devices` — équipements
+### `devices`
 
-| Clé | Rôle |
+| Key | Purpose |
 |---|---|
-| `entity` | Entité Home Assistant (obligatoire). |
-| `id` | Identifiant stable (par défaut : l'entité). |
-| `name` | Nom affiché (par défaut : `friendly_name`). |
-| `x`, `y` | Position. Sans position, l'équipement attend dans la case « À placer ». |
-| `icon` | Icône animée de la bibliothèque (voir plus bas) ou icône `mdi:…` statique. Par défaut, elle est devinée. |
-| `kind` | `toggle` (clic = allumer/éteindre), `info` (clic = fiche), `value` (valeur affichée), `widget`. Par défaut : `toggle` pour light/switch/input_boolean/fan, `value` pour un capteur avec unité, sinon `info`. Si tu choisis une icône pour un capteur avec unité, l'icône s'affiche avec sa valeur en pastille (sauf `kind: value` explicite, et sauf pour les widgets météo : ajoute `widget: false` pour leur préférer l'icône). |
-| `widget` | `false` affiche la valeur brute au lieu du widget animé. |
-| `health` | `false` désactive l'état général de l'appareil (voir ci-dessous). |
-| `health_ignore` | Liste d'entités de l'appareil à ignorer dans l'état général (ex. `binary_sensor.slzb_06_ethernet` pour un coordinateur volontairement en Wi-Fi). |
-| `warn` | `{entity, above, below, prefix}` : pastille « à surveiller » quand la valeur dépasse un seuil. |
-| `gust` | Anémomètre : capteur de rafales (traînées de vent au-delà de 15 km/h). |
-| `intensity` | Pluviomètre : capteur d'intensité (gouttes animées quand il pleut). |
+| `entity` | Home Assistant entity (required). |
+| `id` | Stable identifier (default: the entity). |
+| `name` | Displayed name (default: `friendly_name`). |
+| `x`, `y` | Position. Without a position, the device waits in the "to place" box (« À placer »). |
+| `icon` | Animated icon from the library (see below) or a static `mdi:…` icon. Guessed by default. |
+| `kind` | `toggle` (click = on/off), `info` (click = details), `value` (shows the value), `widget`. Default: `toggle` for light/switch/input_boolean/fan, `value` for a sensor with a unit, `info` otherwise. If you choose an icon for a sensor with a unit, the icon is shown with its value in a small badge (except with an explicit `kind: value`, and except for weather widgets: add `widget: false` to prefer the icon). |
+| `widget` | `false` shows the raw value instead of the animated widget. |
+| `health` | `false` disables the device health status (see below). |
+| `health_ignore` | List of the device's entities to ignore in its health status (e.g. `binary_sensor.slzb_06_ethernet` for a coordinator deliberately on Wi-Fi). |
+| `warn` | `{entity, above, below, prefix}`: "needs attention" marker when the value crosses a threshold. |
+| `gust` | Anemometer: gust sensor (wind streaks above 15 km/h). |
+| `intensity` | Rain gauge: rain-rate sensor (animated drops while it rains). |
 
-Les capteurs de température, humidité, vent, précipitations et pression deviennent automatiquement des widgets animés. Un thermomètre placé hors des pièces affiche un soleil au-delà de 22 °C.
+Temperature, humidity, wind, precipitation and pressure sensors automatically become animated widgets. A thermometer placed outside the rooms shows a sun above 22 °C.
 
-Appui long (ou clic droit) sur une pastille : fiche Home Assistant de l'entité.
+Long press (or right click) on a marker: the entity's Home Assistant dialog — or the device health sheet when available.
 
-### `furniture` — mobilier
+### `furniture`
 
-`{type, x, y, rot, w, h, color}` avec un type du catalogue (`w` et `h` en mètres pour le redimensionner, `color` pour les tissus), ou `{name, parts, x, y, style}` pour un meuble sur mesure. Dans l’éditeur, un bouton « Illustrer » remplace les meubles sur mesure par les illustrations du catalogue, à la même place et à la même taille. `parts` est une liste de formes en mètres : `[r, x, y, largeur, hauteur, arrondi]`, `[c, cx, cy, rayon]`, `[e, cx, cy, rx, ry]`, `[l, x1, y1, x2, y2]`.
+`{type, x, y, rot, w, h, color}` with a catalogue type (`w` and `h` in metres to resize it, `color` for fabrics), or `{name, parts, x, y, style}` for a custom piece. In the editor, an « Illustrer » button replaces custom pieces with catalogue illustrations, at the same place and size. `parts` is a list of shapes in metres: `[r, x, y, width, height, radius]`, `[c, cx, cy, radius]`, `[e, cx, cy, rx, ry]`, `[l, x1, y1, x2, y2]`.
 
-Styles : `wood`, `sofa`, `bed`, `rug`, `plant`, `ceramic`, `bath`, `shower`, `counter`, `app`, `metal`, `stove`, `stool`, `garden`, `lamp`, `tv`, `parasol`, `piano`, `dining`.
+Styles for custom pieces: `wood`, `sofa`, `bed`, `rug`, `plant`, `ceramic`, `bath`, `shower`, `counter`, `app`, `metal`, `stove`, `stool`, `garden`, `lamp`, `tv`, `parasol`, `piano`, `dining`.
 
-### `banner` — tuiles du bandeau
+### `banner` — tiles
 
 ```yaml
 banner:
-  - entity: sensor.exterieur_temperature
-    name: Dehors
+  - entity: sensor.outdoor_temperature
+    name: Outside
     icon: mdi:thermometer
-    color: temperature            # couleur selon la température, ou "#3e7bfa"
+    color: temperature            # colour from the temperature, or "#3e7bfa"
     decimals: 1
-    secondary: "ressenti {sensor.ressenti:1} °C"
-  - entity: sensor.vigilance
-    colors: {Vert: "#2f9e5a", Orange: "#f07a2c"}
-    icons: {Vert: mdi:shield-check-outline}
+    secondary: "feels like {sensor.feels_like:1} °C"
+  - entity: sensor.weather_alert
+    colors: {Green: "#2f9e5a", Orange: "#f07a2c"}
+    icons: {Green: mdi:shield-check-outline}
 ```
 
-Dans `secondary`, `{sensor.x}` insère la valeur d'une entité et `{sensor.x:1}` l'arrondit à une décimale.
+In `secondary`, `{sensor.x}` inserts the value of an entity and `{sensor.x:1}` rounds it to one decimal.
 
-### `alerts` — panneau « À regarder »
+### `alerts` — watch list (« À regarder »)
 
 ```yaml
 alerts:
-  auto: true        # équipements placés indisponibles, portes/fenêtres ouvertes, seuils « warn »
-  battery: 20       # piles sous 20 % (toute l'installation), false pour désactiver
-  updates: true     # entités update.* disponibles
+  auto: true        # placed devices unavailable, doors/windows open, "warn" thresholds, device health
+  battery: 20       # batteries below 20 % (whole installation), false to disable
+  updates: true     # available update.* entities
   rules:
-    - {entity: climate.poele, state: unavailable, level: na, title: "Poêle indisponible", text: "Vérifier son Wi-Fi."}
-    - {entity: binary_sensor.porte, state: "on", title: "Porte ouverte", text: "Depuis {since}."}
-    - {entity: sensor.ram, above: 90, title: "RAM à {value:0} %"}
-    - {entity: sensor.vigilance, not: [Vert, unavailable, unknown], title: "Vigilance {state}"}
+    - {entity: climate.stove, state: unavailable, level: na, title: "Stove unavailable", text: "Check its Wi-Fi."}
+    - {entity: binary_sensor.door, state: "on", title: "Door open", text: "Since {since}."}
+    - {entity: sensor.ram, above: 90, title: "RAM at {value:0} %"}
+    - {entity: sensor.weather_alert, not: [Green, unavailable, unknown], title: "Weather alert {state}"}
 ```
 
-Conditions : `state` (valeur ou liste), `not`, `above`, `below`. Niveaux : `na` (rouge), `warn` (orange), `info` (gris). Variables : `{state}`, `{value}`, `{value:N}`, `{name}`, `{since}`, `{sensor.autre}`. Une entité qui a sa propre règle n'est plus signalée automatiquement.
+Conditions: `state` (value or list), `not`, `above`, `below`. Levels: `na` (red), `warn` (orange), `info` (grey). Variables: `{state}`, `{value}`, `{value:N}`, `{name}`, `{since}`, `{sensor.other}`. An entity that has its own rule is no longer reported automatically.
 
-## Utilisation
+Each item of the watch list has a ✕ button to hide it (remembered per user); a « Réafficher » (show again) link at the bottom of the list brings hidden alerts back.
 
-| Mode | Gestes |
+## Using the card
+
+| Mode | Gestures |
 |---|---|
-| **Consulter** | Clic sur une pastille = allumer/éteindre ou fiche ; appui long = fiche ; clic sur une pièce = son détail dans le panneau. |
-| **Équipements** | Glisser une pastille ; la toucher pour choisir son icône ou la retirer ; ajouter une entité par son identifiant ; remettre un équipement retiré. |
-| **Mobilier** | Glisser un meuble ; le toucher pour le pivoter ou le retirer ; clavier : flèches (Maj = 50 cm), R, Suppr ; « Ajouter un meuble… » ouvre la bibliothèque ; la fiche d’un meuble propose ses couleurs. |
-| **Murs** | Glisser les poignées bleues ; tableau des surfaces. |
+| **View** (« Consulter ») | Click a marker = toggle, or details; long press = details; click a room = its details in the panel. |
+| **Devices** (« Équipements ») | Drag a marker; tap it to choose its icon or remove it; add an entity; restore a removed device. |
+| **Furniture** (« Mobilier ») | Drag a piece; tap it to rotate it, remove it or change its colour; keyboard: arrows (Shift = 50 cm), R, Delete; « Ajouter un meuble… » opens the library. |
+| **Walls** (« Murs ») | Drag the blue handles; table of areas. |
 
-Ces réglages faits directement sur la carte sont enregistrés **pour ton compte**. Pour les rendre définitifs pour tout le monde, ouvre l'éditeur visuel de la carte : un bandeau propose de **les intégrer** à la configuration.
+Changes made directly on the card are saved **for your account**. To make them permanent for everyone, open the card's visual editor: a banner offers to **integrate them** into the configuration (« Les intégrer ici »).
 
-**Exporter** ouvre la configuration YAML complète avec la disposition actuelle, pour la partager ou la reproduire sur un autre Home Assistant.
+**Export** opens the complete YAML configuration with the current layout, to share it or reproduce it on another Home Assistant.
 
-### État général d'un appareil
+### Device health
 
-Pour chaque équipement placé, la carte retrouve l'appareil Home Assistant auquel appartient l'entité et rassemble ses autres entités : connexion, processeur, mémoire, disque, température interne, pile, signal (dBm ou qualité du lien Zigbee), dernière connexion, dernier démarrage, mises à jour, problèmes signalés. Elle en tire un état général : en bonne santé, à surveiller (disque à 85 %, pile sous 20 %, lien faible, pas de nouvelles depuis 24 h…), problème ou hors ligne.
+For each placed device, the card finds the Home Assistant device the entity belongs to and gathers its other entities: connectivity, CPU, memory, disk, internal temperature, battery, signal (dBm or Zigbee link quality), last seen, last boot, updates, reported problems. From them it derives an overall status: healthy, needs attention, problem or offline.
 
-- Un anneau orange ou rouge entoure la pastille quand l'appareil demande de l'attention.
-- Toucher la pastille d'un équipement d'information (ou appui long sur une pastille qui s'allume et s'éteint) ouvre sa fiche santé : tous les indicateurs, les raisons de l'alerte, la fiche de chaque entité et un lien vers l'appareil dans Home Assistant.
-- Les indicateurs en alerte remontent dans « À regarder ». Chaque alerte de la liste a un bouton ✕ pour la masquer ; « Réafficher » en bas de la liste les fait revenir.
-- Un indicateur sans importance dans ton cas (Ethernet débranché sur un appareil volontairement en Wi-Fi, par exemple) peut être ignoré : bouton « Ignorer » sur l'indicateur dans la fiche santé (mémorisé pour ton compte), ou case décochée dans l'éditeur (`health_ignore`, pour tout le monde). Il reste affiché en pointillés, sans effet sur l'état et ne remonte plus dans « À regarder », même s'il est aussi visé par une règle d'alerte personnalisée.
-- `health: false` sur un équipement, ou la case correspondante dans l'éditeur, désactive ce suivi.
+| Indicator | Needs attention | Problem |
+|---|---|---|
+| Disk | 85 % | 95 % |
+| Memory | 90 % | 97 % |
+| CPU | 85 % | 95 % |
+| Chip / CPU temperature | 82 °C | 92 °C |
+| Battery | below 20 % | below 10 % |
+| Zigbee link quality | below 50 | below 20 |
+| Wi-Fi signal | below −80 dBm | below −90 dBm |
+| Last seen | over 24 h | over 72 h |
 
-### Icônes animées
+- An orange or red ring surrounds the marker when the device needs attention.
+- Tapping the marker of an information device (or a long press on a toggle) opens its health sheet: every indicator with gauges, the reasons for the alert, each entity's details and a link to the device page in Home Assistant.
+- A device with several network links (Ethernet + Wi-Fi/Internet…) is not reported when only one link is down: the unused link shows "Non utilisé" (not used).
+- Indicators in alert are reported in the watch list.
+- An indicator that does not matter in your case can be ignored: « Ignorer » button on the indicator in the health sheet (remembered for your account), or unticked box in the editor (`health_ignore`, for everyone). It stays visible with a dotted outline, no longer affects the status and is no longer reported in the watch list, even if a custom alert rule targets it.
+- `health: false` on a device, or the matching box in the editor, disables health tracking.
 
-`bulb` Ampoule · `bulbrgb` Ampoule couleur · `lamp` Lampe · `ceiling` Plafonnier, applique · `string` Guirlande · `guinguette` Guinguette · `spot` Projecteur · `flood` Éclairage extérieur · `socket` Prise · `strip` Multiprise · `solar` Panneau solaire · `ev` Borne de recharge · `door` Porte · `window` Fenêtre, baie · `shutter` Volet · `garage` Porte de garage · `motion` Présence · `camera` Caméra · `shield` Alarme · `lock` Serrure · `doorbell` Sonnette · `fire` Poêle, cheminée · `towel` Sèche-serviettes · `radiator` Radiateur · `thermostat` Thermostat · `heatpump` Climatisation, PAC · `fan` Ventilateur · `purifier` Purificateur d'air · `mosquito` Anti-moustiques · `faucet` Robinet · `sprinkler` Arroseur · `valve` Vanne · `pool` Piscine · `dishwasher` Lave-vaisselle · `washer` Lave-linge · `fridge` Réfrigérateur · `oven` Four · `coffee` Machine à café · `vacuum` Aspirateur robot · `printer` Imprimante · `tv` Télévision · `speaker` Enceinte · `tablet` Tablette, écran · `server` Serveur · `nas` NAS, stockage · `proxmox` Hyperviseur (Proxmox) · `vm` Machine virtuelle · `router` Box internet · `zigbee` Zigbee, radio · `generic` Générique
+### Animated icons
 
-L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, serveurs, box et radios Zigbee restent animés tant qu'ils répondent.
+`bulb` Bulb · `bulbrgb` Colour bulb · `lamp` Lamp · `ceiling` Ceiling / wall light · `string` String lights · `guinguette` Festoon lights · `spot` Spotlight · `flood` Outdoor floodlight · `socket` Plug · `strip` Power strip · `solar` Solar panel · `ev` EV charger · `door` Door · `window` Window, patio door · `shutter` Shutter · `garage` Garage door · `motion` Presence · `camera` Camera · `shield` Alarm · `lock` Lock · `doorbell` Doorbell · `fire` Stove, fireplace · `towel` Towel rail · `radiator` Radiator · `thermostat` Thermostat · `heatpump` Air conditioning, heat pump · `fan` Fan · `purifier` Air purifier · `mosquito` Mosquito repeller · `faucet` Tap · `sprinkler` Sprinkler · `valve` Valve · `pool` Pool · `dishwasher` Dishwasher · `washer` Washing machine · `fridge` Fridge · `oven` Oven · `coffee` Coffee machine · `vacuum` Robot vacuum · `printer` Printer · `tv` TV · `speaker` Speaker · `tablet` Tablet, screen · `server` Server · `nas` NAS, storage · `proxmox` Hypervisor (Proxmox) · `vm` Virtual machine · `router` Internet router · `zigbee` Zigbee, radio · `generic` Generic
 
-### Catalogue de mobilier
+The animation plays when the device is on, open or active. Cameras, servers, NAS, hypervisors, virtual machines, routers and Zigbee radios stay animated as long as they respond.
 
-**Salon** : `canape` Canapé ↔ 🎨 · `canapeangle` Canapé d'angle 🎨 · `fauteuil` Fauteuil 🎨 · `pouf` Pouf 🎨 · `tablebasse` Table basse ↔ · `tablebasseronde` Table basse ronde · `meubletv` Meuble TV ↔ · `tvx` Télévision ↔ · `biblio` Bibliothèque ↔ · `cheminee` Cheminée · `piano` Piano · `lampadaire` Lampadaire · `tapis` Tapis ↔ 🎨 · `tapisrond` Tapis rond 🎨 · `poele` Poêle · `plante` Plante · `escalier` Escalier droit ↔ · `escalierquart` Escalier quart tournant ↔ · `grandeplante` Grande plante
+Icons are guessed from the entity's icon and name — for example "NAS", "Synology", "QNAP" → `nas`; "Proxmox", "PVE", "ESXi" → `proxmox`; "VM", "LXC", "Docker" → `vm`. French keywords are recognised too.
 
-**Repas** : `table` Table ↔ · `tablerepas` Table et 6 chaises 🎨 · `tableronde` Table ronde · `tablerondechaises` Table ronde et 4 chaises 🎨 · `chaise` Chaise 🎨
+### Furniture catalogue
 
-**Chambre** : `lit2` Lit double ↔ 🎨 · `lit1` Lit simple 🎨 · `litbebe` Lit bébé 🎨 · `chevet` Table de chevet · `armoire` Armoire ↔ · `commode` Commode 🎨
+**Living room**: `canape` Sofa ↔ 🎨 · `canapeangle` Corner sofa 🎨 · `fauteuil` Armchair 🎨 · `pouf` Pouf 🎨 · `tablebasse` Coffee table ↔ · `tablebasseronde` Round coffee table · `meubletv` TV unit ↔ · `tvx` Television ↔ · `biblio` Bookcase ↔ · `cheminee` Fireplace · `piano` Piano · `lampadaire` Floor lamp · `tapis` Rug ↔ 🎨 · `tapisrond` Round rug 🎨 · `poele` Stove · `plante` Plant · `escalier` Straight staircase ↔ · `escalierquart` Quarter-turn staircase ↔ · `grandeplante` Large plant
 
-**Bureau** : `bureau` Bureau ↔ · `chaisebureau` Fauteuil de bureau 🎨
+**Dining**: `table` Table ↔ · `tablerepas` Table with 6 chairs 🎨 · `tableronde` Round table · `tablerondechaises` Round table with 4 chairs 🎨 · `chaise` Chair 🎨
 
-**Cuisine** : `cuisine` Cuisine équipée ↔ · `plantravail` Plan de travail ↔ · `bar` Bar ↔ · `cuisineangle` Cuisine d'angle ↔ · `ilot` Îlot central ↔ 🎨 · `evier` Évier · `evierdouble` Évier double · `four` Cuisinière · `plaque` Plaque de cuisson · `frigo` Réfrigérateur · `frigoamericain` Frigo américain · `lavevaisselle` Lave-vaisselle · `tabouret` Tabouret 🎨
+**Bedroom**: `lit2` Double bed ↔ 🎨 · `lit1` Single bed 🎨 · `litbebe` Cot 🎨 · `chevet` Bedside table · `armoire` Wardrobe ↔ · `commode` Chest of drawers 🎨
 
-**Salle de bain** : `baignoirex` Baignoire · `douchex` Douche ↔ · `lavabo` Lavabo · `meublevasque` Meuble double vasque ↔ · `wcx` WC · `secheserviette` Sèche-serviettes 🎨 · `tapisbain` Tapis de bain 🎨 · `lavelinge` Lave-linge · `seche` Sèche-linge · `radiateurx` Radiateur ↔
+**Office**: `bureau` Desk ↔ · `chaisebureau` Office chair 🎨
 
-**Jardin** : `transat` Transat 🎨 · `salonjardin` Salon de jardin 🎨 · `tablejardin` Table de jardin · `parasol` Parasol 🎨 · `barbecue` Barbecue · `brasero` Brasero · `piscine` Piscine ↔ · `spa` Spa · `pergola` Pergola glycine ↔ · `potager` Potager ↔ · `massif` Massif fleuri ↔ · `lavandes` Rang de lavandes ↔ · `haie` Haie ↔ · `olivier` Olivier · `palmier` Palmier · `fruitier` Arbre fruitier · `potfleurs` Pot de fleurs 🎨 · `hamac` Hamac 🎨 · `trampoline` Trampoline · `tondeuse` Robot tondeuse · `voiture` Voiture 🎨 · `velo` Vélo 🎨
+**Kitchen**: `cuisine` Fitted kitchen run ↔ · `plantravail` Worktop ↔ · `bar` Bar ↔ · `cuisineangle` Corner kitchen ↔ · `ilot` Kitchen island ↔ 🎨 · `evier` Sink · `evierdouble` Double sink · `four` Cooker · `plaque` Hob · `frigo` Fridge · `frigoamericain` American fridge · `lavevaisselle` Dishwasher · `tabouret` Stool 🎨
 
-↔ redimensionnable (`w`, `h`) · 🎨 couleur au choix (`color`) : `canard`, `bleu`, `ciel`, `marine`, `sauge`, `vert`, `moutarde`, `corail`, `terracotta`, `rose`, `lavande`, `gris`, `anthracite`, `lin` ou une couleur `#rrggbb`.
+**Bathroom**: `baignoirex` Bathtub · `douchex` Shower ↔ · `lavabo` Washbasin · `meublevasque` Double vanity ↔ · `wcx` Toilet · `secheserviette` Towel rail 🎨 · `tapisbain` Bath mat 🎨 · `lavelinge` Washing machine · `seche` Tumble dryer · `radiateurx` Radiator ↔
 
-## Développement
+**Garden**: `transat` Sun lounger 🎨 · `salonjardin` Garden lounge set 🎨 · `tablejardin` Garden table · `parasol` Parasol 🎨 · `barbecue` Barbecue · `brasero` Fire pit · `piscine` Swimming pool ↔ · `spa` Hot tub · `pergola` Wisteria pergola ↔ · `potager` Vegetable patch ↔ · `massif` Flower bed ↔ · `lavandes` Lavender row ↔ · `haie` Hedge ↔ · `olivier` Olive tree · `palmier` Palm tree · `fruitier` Fruit tree · `potfleurs` Flower pot 🎨 · `hamac` Hammock 🎨 · `trampoline` Trampoline · `tondeuse` Robot mower · `voiture` Car 🎨 · `velo` Bicycle 🎨
+
+↔ resizable (`w`, `h`) · 🎨 colour choice (`color`): `canard` (teal), `bleu` (blue), `ciel` (sky blue), `marine` (navy), `sauge` (sage), `vert` (green), `moutarde` (mustard), `corail` (coral), `terracotta` (terracotta), `rose` (pink), `lavande` (lavender), `gris` (grey), `anthracite` (charcoal), `lin` (linen), or any `#rrggbb` colour.
+
+## Development
 
 ```bash
 npm install
 npm run build        # dist/plan-maison-card.js
-npm run watch        # reconstruction à chaque modification
-python3 -m http.server 8790 & npm test   # bancs d'essai Playwright : carte (test/index.html) et éditeur (test/editor.html) ; planches de revue : test/gallery.html (icônes) et test/furniture.html (mobilier)
+npm run watch        # rebuild on every change
+python3 -m http.server 8790 & npm test   # Playwright test benches: card (test/index.html) and editor (test/editor.html); review sheets: test/gallery.html (icons) and test/furniture.html (furniture)
 ```
 
-Le banc d'essai `test/index.html?cfg=simple` charge un exemple avec un faux objet `hass`, sans Home Assistant.
+The test bench `test/index.html?cfg=simple` loads an example with a fake `hass` object, without Home Assistant.
 
-Le code est découpé en modules dans `src/` : `geometry.js` (lecture de la config, murs, axes), `card.js` (la carte), `editor.js` (l'éditeur visuel), `icons.js` (icônes animées), `furniture.js` (catalogue), `furnart.js` (dessin du mobilier), `styles.js`, `yaml.js`.
+The code is split into modules in `src/`: `geometry.js` (config parsing, walls, axes), `card.js` (the card), `editor.js` (the visual editor), `icons.js` (animated icons), `health.js` (device health), `furniture.js` (catalogue), `furndraw.js` and `furnart.js` (furniture drawings), `picker.js` (entity picker), `styles.js`, `yaml.js`.
+
+Contributions are welcome, including a translation of the card's interface.
 
 ## Licence
 
