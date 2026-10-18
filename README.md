@@ -305,6 +305,16 @@ Icons are guessed from the entity's icon and name — for example "NAS", "Synolo
 
 ↔ resizable (`w`, `h`) · 🎨 colour choice (`color`): `canard` (teal), `bleu` (blue), `ciel` (sky blue), `marine` (navy), `sauge` (sage), `vert` (green), `moutarde` (mustard), `corail` (coral), `terracotta` (terracotta), `rose` (pink), `lavande` (lavender), `gris` (grey), `anthracite` (charcoal), `lin` (linen), or any `#rrggbb` colour.
 
+## 3D view (experimental)
+
+A second card, `custom:plan-maison-3d-card`, builds a 3D model of the house from **the same configuration** as the plan card (copy the plan card's YAML and change the `type`). Walls are derived from the rooms, with doors, windows and French windows, blue shutters, a rendered-sand façade and a hipped roof of Roman tiles; furniture, string lights and devices are placed where they are on the plan, including what you moved with the mouse on the card.
+
+- Buttons: roof on or off, low walls (a doll's-house view), evening, room names, recentre.
+- Live state: string lights glow when their entity is on, light devices light up in the evening, each device is a dot coloured by its state; tapping it opens its Home Assistant dialog. The evening view follows `sun.sun`.
+- three.js is loaded from `cdn.jsdelivr.net` only when this card is on screen; nothing is computed while the view does not move.
+
+Extra options: `floors` (per room id or name: `light`, `dark`, `brown`, `terracotta`, `wood`, `bluewood`, `concrete` or a colour), `colors` (`facade`, `shutters`, `roof`), `wall_height` (m, default 2.6), `roof_pitch` (default 0.3), `roof: false`, `shutters: false`, `height` (card height, default 560px).
+
 ## Development
 
 ```bash

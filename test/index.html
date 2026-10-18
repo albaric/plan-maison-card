@@ -58,7 +58,7 @@ await customElements.whenDefined('plan-maison-card');
 const C = customElements.get('plan-maison-card');
 const name = q.get('cfg') || 'complete';
 let cfg = name === 'stub' ? C.getStubConfig() : jsyaml.load(await (await fetch('../examples/' + name + '.yaml')).text());
-window.card = document.createElement('plan-maison-card');
+window.card = document.createElement(q.get('card') === '3d' ? 'plan-maison-3d-card' : 'plan-maison-card');
 try { card.setConfig(cfg); } catch (e) { document.getElementById('host').textContent = 'ERREUR CONFIG : ' + e.message; window.cfgError = e.message; throw e; }
 document.getElementById('host').appendChild(card); card.hass = hass;
 window.addEventListener('hass-more-info', e=>{ window.lastMore=e.detail.entityId; });

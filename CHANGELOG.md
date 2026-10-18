@@ -2,6 +2,10 @@
 
 **English** · [Français](CHANGELOG.fr.md)
 
+## 1.12.0
+
+- New experimental card `custom:plan-maison-3d-card`: a 3D model of the house built from the same configuration as the plan card (walls, doors, windows with shutters, hipped tiled roof, furniture, string lights, devices), with live states, evening view and room names. three.js is loaded on demand from a CDN; the main card is unchanged.
+
 ## 1.11.0
 
 - Much lighter on the browser (Safari especially). Measured on the example plan: main-thread work goes from about 40 % of a core to almost nothing.

@@ -288,6 +288,16 @@ L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, 
 
 ↔ redimensionnable (`w`, `h`) · 🎨 couleur au choix (`color`) : `canard`, `bleu`, `ciel`, `marine`, `sauge`, `vert`, `moutarde`, `corail`, `terracotta`, `rose`, `lavande`, `gris`, `anthracite`, `lin` ou une couleur `#rrggbb`.
 
+## Vue 3D (expérimentale)
+
+Une seconde carte, `custom:plan-maison-3d-card`, construit une maquette 3D de la maison à partir de **la même configuration** que la carte plan (copie le YAML de la carte plan et change le `type`). Les murs sont déduits des pièces, avec portes, fenêtres et portes-fenêtres, volets bleus, façade en crépi sable et toit en croupe en tuiles canal ; le mobilier, les guirlandes et les équipements sont placés comme sur le plan, y compris ce que tu as déplacé à la souris sur la carte.
+
+- Boutons : toit, murs bas (vue maison de poupée), soirée, noms des pièces, recentrer.
+- État réel : les guirlandes s'allument avec leur entité, les lampes éclairent le soir, chaque équipement est une pastille colorée selon son état ; la toucher ouvre sa fiche Home Assistant. La soirée suit `sun.sun`.
+- three.js est chargé depuis `cdn.jsdelivr.net` seulement quand cette carte est affichée ; rien n'est calculé tant que la vue ne bouge pas.
+
+Options en plus : `floors` (par id ou nom de pièce : `light`, `dark`, `brown`, `terracotta`, `wood`, `bluewood`, `concrete` ou une couleur), `colors` (`facade`, `shutters`, `roof`), `wall_height` (m, 2,6 par défaut), `roof_pitch` (0,3 par défaut), `roof: false`, `shutters: false`, `height` (hauteur de la carte, 560px par défaut).
+
 ## Développement
 
 ```bash

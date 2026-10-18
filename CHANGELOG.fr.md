@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md) · **Français**
 
+## 1.12.0
+
+- Nouvelle carte expérimentale `custom:plan-maison-3d-card` : maquette 3D de la maison construite à partir de la même configuration que la carte plan (murs, portes, fenêtres et volets, toit en croupe en tuiles, mobilier, guirlandes, équipements), avec l'état réel, la soirée et le nom des pièces. three.js est chargé à la demande depuis un CDN ; la carte plan ne change pas.
+
 ## 1.11.0
 
 - Beaucoup plus léger pour le navigateur (Safari en particulier). Mesuré sur le plan d'exemple : le travail du fil principal passe d'environ 40 % d'un cœur à presque rien.
