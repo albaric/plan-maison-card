@@ -2,6 +2,12 @@
 
 **English** · [Français](CHANGELOG.fr.md)
 
+## 1.13.0
+
+- Living plan: a room lights up while a presence or motion sensor placed in it detects someone; a lamp that is on casts a pool of light on the floor, in its real colour and brightness, stopped by the walls; a door or window contact sensor placed near an opening is linked to it automatically and the leaf swings open on the plan (sliding door or garage: the opening lights up). `live: false` turns it off.
+- Charts on tap: tapping a sensor shows its chart over 24 hours or 7 days, with min, time-weighted mean and max and a cursor that follows the finger; the anemometer also draws its gusts. Door, window and presence sensors show their open or active periods and how many times. Servers, routers and cameras keep their health sheet first; each indicator of the sheet opens its chart. `graphs: false` keeps the Home Assistant dialog.
+- The experimental 3D card is removed.
+
 ## 1.12.0
 
 - New experimental card `custom:plan-maison-3d-card`: a 3D model of the house built from the same configuration as the plan card (walls, doors, windows with shutters, hipped tiled roof, furniture, string lights, devices), with live states, evening view and room names. three.js is loaded on demand from a CDN; the main card is unchanged.

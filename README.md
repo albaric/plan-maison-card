@@ -21,6 +21,8 @@ You draw the plan with the mouse in a visual editor (or write it in YAML), then 
 - **Illustrated furniture**, one drawing per piece: 77 items sorted by room (living room, dining, bedroom, office, kitchen, bathroom, garden), with their details (tableware, books, towels, a rubber duck in the bath, vegetable patch, pool, wisteria pergola…). Worktops, pool, vegetable patch, hedge… can be resized; sofas, beds, rugs… come in 14 colours.
 - **String lights** drawn on the plan, which glow (halo, twinkling bulbs) when their entity is on; a click switches them.
 - **Device health**: for servers, NAS, routers, Zigbee coordinators or any field device, the card gathers all the entities of the Home Assistant device (connectivity, CPU, memory, disk, temperature, battery, signal, last seen, updates…) and shows an overall status (see below).
+- **Living plan**: a room lights up softly while a presence or motion sensor placed in it detects someone; a lamp that is on casts a pool of light on the floor (its real colour and brightness, stopped by the walls); a door or window contact sensor placed near an opening swings its leaf open on the plan.
+- **Charts on tap**: tapping a sensor opens its chart over the last 24 hours or 7 days (min, mean, max, a cursor that follows the finger; gusts drawn on the anemometer). A door or presence sensor shows when it was open or active and how many times. Servers and other monitored devices still open their health sheet first, and each indicator there opens its own chart.
 - **Banner** of tiles (weather or any sensor) and a **watch list** panel (« À regarder »): unavailable devices, open doors, low batteries, updates, device health issues, plus your own rules.
 - Light and dark themes (follows Home Assistant).
 - **Light on the browser** by default: only motion that means something runs continuously (fan, washing machine, wind, rain, string lights); other icons animate for a few seconds after a change of state or on hover, then keep their "on" look. Animations pause when the card is off screen, and are turned off when the system asks for reduced motion. The card only redraws when one of its own entities changes. See `animations`.
@@ -119,6 +121,8 @@ rooms:
 | `view` | computed | Visible frame `[x, y, width, height]` in metres. |
 | `theme` | `auto` | `auto`, `light` or `dark`. |
 | `animations` | `auto` | `auto` (economical, see above), `full` (every icon, the furniture and the status dot animate continuously, as before 1.11) or `off` (no animation at all). |
+| `live` | `true` | `false` turns off the living plan (presence, light pools, doors and windows that open). |
+| `graphs` | `true` | `false`: tapping a sensor opens the Home Assistant dialog instead of the chart. |
 | `fonts` | `true` | `false` does not load the Google fonts (Barlow Condensed, Source Sans 3, JetBrains Mono). |
 | `panel` | `true` | `false` hides the overview panel (the watch list next to the plan). |
 | `panel_width` | auto | Width of the overview panel in pixels (200 to 700). On the card you can also drag the panel's left edge: that width is remembered per user; double-click to go back to the configured value. |
@@ -304,16 +308,6 @@ Icons are guessed from the entity's icon and name — for example "NAS", "Synolo
 **Garden**: `transat` Sun lounger 🎨 · `salonjardin` Garden lounge set 🎨 · `tablejardin` Garden table · `parasol` Parasol 🎨 · `barbecue` Barbecue · `brasero` Fire pit · `piscine` Swimming pool ↔ · `spa` Hot tub · `pergola` Wisteria pergola ↔ · `potager` Vegetable patch ↔ · `massif` Flower bed ↔ · `lavandes` Lavender row ↔ · `haie` Hedge ↔ · `olivier` Olive tree · `palmier` Palm tree · `fruitier` Fruit tree · `potfleurs` Flower pot 🎨 · `hamac` Hammock 🎨 · `trampoline` Trampoline · `tondeuse` Robot mower · `voiture` Car 🎨 · `velo` Bicycle 🎨
 
 ↔ resizable (`w`, `h`) · 🎨 colour choice (`color`): `canard` (teal), `bleu` (blue), `ciel` (sky blue), `marine` (navy), `sauge` (sage), `vert` (green), `moutarde` (mustard), `corail` (coral), `terracotta` (terracotta), `rose` (pink), `lavande` (lavender), `gris` (grey), `anthracite` (charcoal), `lin` (linen), or any `#rrggbb` colour.
-
-## 3D view (experimental)
-
-A second card, `custom:plan-maison-3d-card`, builds a 3D model of the house from **the same configuration** as the plan card (copy the plan card's YAML and change the `type`). Walls are derived from the rooms, with doors, windows and French windows, blue shutters, a rendered-sand façade and a hipped roof of Roman tiles; furniture, string lights and devices are placed where they are on the plan, including what you moved with the mouse on the card.
-
-- Buttons: roof on or off, low walls (a doll's-house view), evening, room names, recentre.
-- Live state: string lights glow when their entity is on, light devices light up in the evening, each device is a dot coloured by its state; tapping it opens its Home Assistant dialog. The evening view follows `sun.sun`.
-- three.js is loaded from `cdn.jsdelivr.net` only when this card is on screen; nothing is computed while the view does not move.
-
-Extra options: `floors` (per room id or name: `light`, `dark`, `brown`, `terracotta`, `wood`, `bluewood`, `concrete` or a colour), `colors` (`facade`, `shutters`, `roof`), `wall_height` (m, default 2.6), `roof_pitch` (default 0.3), `roof: false`, `shutters: false`, `height` (card height, default 560px).
 
 ## Development
 

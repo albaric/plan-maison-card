@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) · **Français**
 
+## 1.13.0
+
+- Plan vivant : une pièce s'éclaire quand un capteur de présence ou de mouvement placé dedans détecte quelqu'un ; une lampe allumée projette un halo sur le sol, dans sa vraie couleur et sa luminosité, arrêté par les murs ; un capteur d'ouverture placé près d'une porte ou d'une fenêtre lui est relié automatiquement et le battant pivote sur le plan (baie coulissante ou garage : l'ouverture s'allume). `live: false` le désactive.
+- Courbes au toucher : toucher un capteur affiche sa courbe sur 24 h ou 7 jours, avec min, moyenne pondérée et max, et un curseur qui suit le doigt ; l'anémomètre trace aussi ses rafales. Les capteurs de porte, de fenêtre et de présence montrent leurs périodes d'ouverture ou d'activité et leur nombre. Serveurs, box et caméras gardent d'abord leur fiche santé, dont chaque indicateur ouvre sa courbe. `graphs: false` garde la fiche Home Assistant.
+- La carte 3D expérimentale est retirée.
+
 ## 1.12.0
 
 - Nouvelle carte expérimentale `custom:plan-maison-3d-card` : maquette 3D de la maison construite à partir de la même configuration que la carte plan (murs, portes, fenêtres et volets, toit en croupe en tuiles, mobilier, guirlandes, équipements), avec l'état réel, la soirée et le nom des pièces. three.js est chargé à la demande depuis un CDN ; la carte plan ne change pas.

@@ -53,12 +53,12 @@ const devices = { srv: { name: 'Serveur', manufacturer: 'Proxmox', model: 'VM Ho
 window.calls=[]; window.store={};
 const hass = { states, entities, devices, areas:{}, themes:{darkMode: location.hash==='#dark'},
   callService:(d,s,data)=>{ calls.push([d,s,data]); const e=data.entity_id; states[e]={...states[e], state: states[e].state==='on'?'off':'on'}; card.hass={...hass, states:{...states}}; },
-  callWS:async(m)=>{ if(m.type==='frontend/get_user_data') return {value: store[m.key]||null}; if(m.type==='frontend/set_user_data'){ store[m.key]=JSON.parse(JSON.stringify(m.value)); return {}; } } };
+  callWS:async(m)=>{ if(m.type==='history/history_during_period'){ window.histCalls=(window.histCalls||0)+1; const t0=Date.parse(m.start_time)/1000, t1=Date.parse(m.end_time)/1000, o={}; m.entity_ids.forEach(e=>{ const st=states[e]; const v=parseFloat(st&&st.state); const a=[]; for(let t=t0;t<t1;t+=900){ const k=(t-t0)/3600; a.push(isNaN(v)?{s:(Math.floor(k/3)%4===0?'on':'off'),lu:t}:{s:String(Math.round((v+Math.sin(k/3)*3+Math.sin(k*1.7))*10)/10),lu:t}); } o[e]=a; }); return o; } if(m.type==='frontend/get_user_data') return {value: store[m.key]||null}; if(m.type==='frontend/set_user_data'){ store[m.key]=JSON.parse(JSON.stringify(m.value)); return {}; } } };
 await customElements.whenDefined('plan-maison-card');
 const C = customElements.get('plan-maison-card');
 const name = q.get('cfg') || 'complete';
 let cfg = name === 'stub' ? C.getStubConfig() : jsyaml.load(await (await fetch('../examples/' + name + '.yaml')).text());
-window.card = document.createElement(q.get('card') === '3d' ? 'plan-maison-3d-card' : 'plan-maison-card');
+window.card = document.createElement('plan-maison-card');
 try { card.setConfig(cfg); } catch (e) { document.getElementById('host').textContent = 'ERREUR CONFIG : ' + e.message; window.cfgError = e.message; throw e; }
 document.getElementById('host').appendChild(card); card.hass = hass;
 window.addEventListener('hass-more-info', e=>{ window.lastMore=e.detail.entityId; });

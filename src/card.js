@@ -1,9 +1,8 @@
 // plan-maison-card : plan de maison interactif et éditable pour Home Assistant.
-import "./card3d.js";
 import { ICONS, ALWAYS, ACCENT, guess } from "./icons.js";
 import { CAT, FSTYLE, META, furnParts } from "./furniture.js";
 import { furnSvg, FURN_DEFS, furnLibHtml, furnSwatches, zoneArt } from "./furnart.js";
-import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG, MOTION_CSS } from "./styles.js";
+import { BASE_CSS, WIDGET_CSS, ICON_CSS, WSVG, MOTION_CSS, LIVE_CSS } from "./styles.js";
 import * as G from "./geometry.js";
 import { deviceHealth, deviceEntities, HEALTH_CSS } from "./health.js";
 import { toYaml } from "./yaml.js";
@@ -11,7 +10,7 @@ import { STUB } from "./stub.js";
 import "./editor.js";
 import { createPicker, PICKER_CSS, DEVICE_DOMAINS, describe } from "./picker.js";
 
-export const VERSION = "1.12.0";
+export const VERSION = "1.13.0";
 const NS = "http://www.w3.org/2000/svg";
 const FONTS = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap";
 const TOGGLE = ["light", "switch", "input_boolean", "fan"];
@@ -38,6 +37,7 @@ const tempColor = (t) => {
 const DC_COLOR = { temperature: "temperature", humidity: "#3e7bfa", pressure: "#8e6bd8", atmospheric_pressure: "#8e6bd8", precipitation: "#2bb3a3", precipitation_intensity: "#2bb3a3", wind_speed: "#5aa0ff", battery: "#30a46c", illuminance: "#f5a524", power: "#f07a2c", energy: "#f07a2c" };
 const DC_ICON = { temperature: "mdi:thermometer", humidity: "mdi:water-percent", pressure: "mdi:gauge", atmospheric_pressure: "mdi:gauge", precipitation: "mdi:weather-rainy", precipitation_intensity: "mdi:weather-pouring", wind_speed: "mdi:weather-windy", battery: "mdi:battery", illuminance: "mdi:brightness-5", power: "mdi:flash", energy: "mdi:lightning-bolt" };
 /** Icônes dont le mouvement dit quelque chose (ça tourne, ça coule, ça lave) : animées en continu tant qu'elles sont actives, même en mode économe. */
+const LIGHT_IK = new Set(["bulb", "bulbrgb", "lamp", "ceiling", "spot", "flood"]);
 const CONT = { fan: 1, heatpump: 1, purifier: 1, washer: 1, dishwasher: 1, vacuum: 1, sprinkler: 1, faucet: 1, valve: 1, ev: 1, pool: 1 };
 
 /** Type de widget animé pour un capteur, d'après sa classe ou son unité. */
@@ -127,7 +127,7 @@ class PlanMaisonCard extends HTMLElement {
     this._L = { axes: {}, pos: {}, furn: {}, added: [], devAdded: [], devHidden: {}, names: {}, icons: {} };
     this._AX = Object.assign({}, this._defAX); this._geo();
     const r = this.attachShadow({ mode: "open" });
-    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}${HEALTH_CSS}${MOTION_CSS}</style><ha-card><div class="wrap">
+    r.innerHTML = `<style>${BASE_CSS}${WIDGET_CSS}${ICON_CSS}${EXTRA_CSS}${PICKER_CSS}${HEALTH_CSS}${MOTION_CSS}${LIVE_CSS}</style><ha-card><div class="wrap">
       <header><h1 id="title"></h1><div class="live" id="live"><i></i><span></span></div></header>
       <section class="meteo" id="meteo"></section>
       <div class="main">
@@ -477,6 +477,7 @@ class PlanMaisonCard extends HTMLElement {
     el("rect", { x: D.x, y: D.y, width: D.w, height: D.h }, dk);
     el("text", { x: D.x + 2, y: D.y + 3.6, class: "glab", "font-size": 2.4 }, dk).textContent = "À placer";
     m.rooms.forEach((r) => { el("polygon", { points: this._P[r.id].map((p) => p.join(",")).join(" "), class: "room " + r.kind + (f === r.id ? " sel" : "") }, g).onclick = (e) => { e.stopPropagation(); this._pick(r.id, e); }; });
+    this._livingLayer(g);
     if (this.$("showfurn").checked) {
       const fg = el("g", {}, g);
       this._furn().forEach((it) => {
@@ -502,6 +503,7 @@ class PlanMaisonCard extends HTMLElement {
         el("text", { x: (x1 + x2) / 2 + d[0] * 5, y: (y1 + y2) / 2 + d[1] * 4.6 + (d[1] < 0 ? 0 : 0) + (d[0] ? 0.8 : 0), "text-anchor": d[0] < 0 ? "end" : d[0] > 0 ? "start" : "middle", class: "glab", "font-size": 2.3 }, g).textContent = o.label;
       }
     });
+    this._openingLinks(g);
     this._lightsDraw(g);
     if (!m.rooms.length) {
       el("text", { x: V[0] + V[2] / 2, y: V[1] + V[3] / 2 - 4, "text-anchor": "middle", class: "lab", "font-size": 5 }, g).textContent = "Plan vide";
@@ -512,6 +514,76 @@ class PlanMaisonCard extends HTMLElement {
       el("text", { x, y, "text-anchor": "middle", class: "lab" + (f === r.id ? " sel" : ""), "font-size": fs }, g).textContent = this._rname(r);
       el("text", { x, y: y + fs * 0.95, "text-anchor": "middle", class: "area", "font-size": Math.max(1.9, fs * 0.62) }, g).textContent = (r.area != null ? fr(r.area) : "≈ " + fr(a)) + " m²";
     });
+  }
+  /* ---------- plan vivant ---------- */
+  _roomAt(p) { return p ? this._model.rooms.find((r) => G.inPoly(p[0], p[1], this._P[r.id])) : null; }
+  /** Sous le mobilier : pièces où une présence est détectée, et halo des lampes allumées (couleur et intensité réelles), coupé aux murs. */
+  _livingLayer(g) {
+    const el = this._el.bind(this), st = this._hass.states, defs = this._svg.querySelector("defs");
+    this._occ = []; this._pools = [];
+    if (this._config.live === false) return;
+    const devs = this._devs().filter((d) => d.pos), clip = {};
+    const clipOf = (r) => { if (!clip[r.id]) { const c = el("clipPath", { id: "pmc-" + slug(r.id) }, defs); el("polygon", { points: this._P[r.id].map((p) => p.join(",")).join(" ") }, c); clip[r.id] = "url(#pmc-" + slug(r.id) + ")"; } return clip[r.id]; };
+    // halo des lampes
+    devs.forEach((d, i) => {
+      const dom = d.entity.split(".")[0]; if (!(dom === "light" || LIGHT_IK.has(d.ik))) return;
+      const r = this._roomAt(d.pos), gid = "pmlg" + i, gr = el("radialGradient", { id: gid }, defs);
+      const s0 = el("stop", { offset: 0, "stop-opacity": 0.55 }, gr), s1 = el("stop", { offset: 0.45, "stop-opacity": 0.22 }, gr); el("stop", { offset: 1, "stop-opacity": 0 }, gr).setAttribute("stop-color", "#ffd27a");
+      const c = el("circle", { cx: d.pos[0], cy: d.pos[1], r: r ? 30 : 22, fill: `url(#${gid})`, class: "pool" }, g);
+      if (r) c.setAttribute("clip-path", clipOf(r));
+      this._pools.push({ entity: d.entity, c, stops: [s0, s1, gr.lastChild] });
+    });
+    // présence
+    const occ = {};
+    devs.forEach((d) => { const s = st[d.entity], dc = s && s.attributes.device_class; if (!(d.entity.startsWith("binary_sensor.") && (["occupancy", "motion", "presence"].includes(dc) || d.ik === "motion"))) return; const r = this._roomAt(d.pos); if (r) (occ[r.id] = occ[r.id] || []).push(d.entity); });
+    Object.entries(occ).forEach(([id, ents]) => this._occ.push({ ents, el: el("polygon", { points: this._P[id].map((p) => p.join(",")).join(" "), class: "occ" }, g) }));
+  }
+  /** Capteurs d'ouverture reliés à la porte ou à la fenêtre la plus proche (moins de 1,5 m) : le battant s'ouvre sur le plan. */
+  _openingLinks(g) {
+    const el = this._el.bind(this), st = this._hass.states; this._opn = [];
+    if (this._config.live === false) return;
+    const used = new Set(), inside = (x, y) => this._model.rooms.some((r) => G.inPoly(x, y, this._P[r.id]));
+    this._devs().filter((d) => d.pos).forEach((d) => {
+      const s = st[d.entity], dc = (s && s.attributes.device_class) || "";
+      const kind = d.ik === "garage" || dc === "garage_door" ? "garage" : d.ik === "window" || dc === "window" ? "window" : d.ik === "door" || ["door", "opening"].includes(dc) ? "door" : null;
+      if (!kind || !(d.entity.startsWith("binary_sensor.") || d.entity.startsWith("cover."))) return;
+      let best = null, bd = 15;
+      this._OP.forEach((o, i) => {
+        if (used.has(i) || !["door", "window"].includes(o.type)) return;
+        const [[x1, y1], [x2, y2]] = o.p, L2 = (x2 - x1) ** 2 + (y2 - y1) ** 2 || 1, t = Math.max(0, Math.min(1, ((d.pos[0] - x1) * (x2 - x1) + (d.pos[1] - y1) * (y2 - y1)) / L2));
+        const dist = Math.hypot(d.pos[0] - (x1 + t * (x2 - x1)), d.pos[1] - (y1 + t * (y2 - y1))) - (o.type === (kind === "window" ? "window" : "door") ? 3 : 0);
+        if (dist < bd) { bd = dist; best = i; }
+      });
+      if (best == null) return; used.add(best);
+      const o = this._OP[best], [[x1, y1], [x2, y2]] = o.p, w = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / w, uy = (y2 - y1) / w;
+      // côté intérieur
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, sgn = inside(mx - uy * 3, my + ux * 3) ? 1 : -1, nx = -uy * sgn, ny = ux * sgn;
+      const gg = el("g", { class: "opn " + kind }, g);
+      if (kind === "garage" || (kind === "door" && w > 26)) el("rect", { x: Math.min(x1, x2) - (ux ? 0 : 1.6), y: Math.min(y1, y2) - (uy ? 0 : 1.6), width: Math.abs(x2 - x1) || 3.2, height: Math.abs(y2 - y1) || 3.2, class: "gap" }, gg);
+      else {
+        const leaves = kind === "window" || w > 13 ? [[x1, y1, w / 2, 1], [x2, y2, w / 2, -1]] : [[x1, y1, w, 1]];
+        leaves.forEach(([hx, hy, len, dir]) => {
+          const ex = hx + ux * dir * len, ey = hy + uy * dir * len, ox = hx + nx * len, oy = hy + ny * len;
+          const ang = ((((Math.atan2(oy - hy, ox - hx) - Math.atan2(ey - hy, ex - hx)) * 180) / Math.PI + 540) % 360) - 180;
+          el("path", { d: `M${ex} ${ey}A${len} ${len} 0 0 ${ang > 0 ? 1 : 0} ${ox} ${oy}`, class: "arc" }, gg);
+          const lf = el("line", { x1: hx, y1: hy, x2: ex, y2: ey, class: "leaf" }, gg);
+          lf.style.transformOrigin = `${hx}px ${hy}px`; lf.dataset.a = ang.toFixed(1);
+        });
+      }
+      this._opn.push({ entity: d.entity, g: gg });
+    });
+  }
+  /** Mise à jour du plan vivant à chaque changement d'état. */
+  _liveStates() {
+    const st = this._hass.states, on = (e) => { const s = st[e]; return !!s && ["on", "open", "opening", "home"].includes(s.state); };
+    (this._occ || []).forEach((o) => o.el.classList.toggle("on", o.ents.some(on)));
+    (this._pools || []).forEach((p) => {
+      const s = st[p.entity], lit = !!s && s.state === "on", a = (s && s.attributes) || {};
+      const rgb = a.rgb_color ? `rgb(${a.rgb_color.join(",")})` : a.color_temp_kelvin && a.color_temp_kelvin > 4500 ? "#fff3d6" : "#ffd27a";
+      p.stops.forEach((x) => x.setAttribute("stop-color", rgb));
+      p.c.style.opacity = lit ? (a.brightness != null ? (0.35 + 0.65 * (a.brightness / 255)).toFixed(2) : 1) : 0;
+    });
+    (this._opn || []).forEach((o) => { const v = on(o.entity); o.g.classList.toggle("open", v); o.g.querySelectorAll(".leaf").forEach((l) => (l.style.transform = v ? `rotate(${l.dataset.a}deg)` : "")); });
   }
   _lightsDraw(g) {
     const el = this._el.bind(this);
@@ -642,8 +714,46 @@ class PlanMaisonCard extends HTMLElement {
   _tap(d) {
     const dom = d.entity.split(".")[0], st = this._hass.states[d.entity];
     if (d.kind === "t" && TOGGLE.includes(dom) && st && !NA.includes(st.state)) this._hass.callService(dom, "toggle", { entity_id: d.entity });
+    else if (ALWAYS[d.ik] && this._hp(d)) this._healthPop(d); // serveurs, box, caméras : l'état général d'abord
+    else if (this._config.graphs !== false && this._graphable(d)) this._graphPop(d);
     else if (this._hp(d)) this._healthPop(d);
     else this._more(d.entity);
+  }
+  /* ---------- courbes au toucher ---------- */
+  _graphable(d) {
+    if (d.garland) return false;
+    const st = this._hass.states[d.entity]; if (!st) return false;
+    if (d.entity.startsWith("binary_sensor.")) return true;
+    return /^(sensor|input_number|number)\./.test(d.entity) && (!!st.attributes.unit_of_measurement || !isNaN(parseFloat(st.state)));
+  }
+  async _hist(eid, hours) {
+    const key = eid + "|" + hours, c = (this._hcache = this._hcache || {})[key];
+    if (c && Date.now() - c.t < 60000) return c.v;
+    const end = new Date(), start = new Date(end - hours * 3600e3);
+    const r = await this._hass.callWS({ type: "history/history_during_period", start_time: start.toISOString(), end_time: end.toISOString(), entity_ids: [eid], minimal_response: true, no_attributes: true, significant_changes_only: false });
+    const v = ((r && r[eid]) || []).map((x) => [1000 * (x.lu ?? x.lc ?? Date.parse(x.last_updated || x.last_changed) / 1000), x.s ?? x.state]).filter((x) => isFinite(x[0]));
+    this._hcache[key] = { t: Date.now(), v }; return v;
+  }
+  async _graphPop(d, hours = 24) {
+    const pop = this._pop, st = this._hass.states[d.entity], bin = d.entity.startsWith("binary_sensor."), unit = (st && st.attributes.unit_of_measurement) || "";
+    const now = st ? (bin ? this._stateOf(d).t : this._fmt(st)) : "–";
+    const color = d.wg === "temp" ? tempColor(this._num(d.entity) ?? 15) : d.wg === "hum" ? humColor(this._num(d.entity) ?? 50) : ACCENT[d.ik] || (DC_COLOR[st && st.attributes.device_class] !== "temperature" && DC_COLOR[st && st.attributes.device_class]) || "#3e7bfa";
+    pop.classList.remove("xl"); pop.classList.add("wide");
+    pop.innerHTML = `<div class="gsheet"><div class="ghead"><div><div class="t">${esc(this._nm(d))}</div><div class="gnow">${esc(now)}</div></div><div class="grng"><button data-h="24" class="${hours === 24 ? "on" : ""}">24 h</button><button data-h="168" class="${hours === 168 ? "on" : ""}">7 j</button></div></div>
+      <div id="gbox"><div class="gmsg">Chargement de l'historique…</div></div>
+      <div class="row"><button class="btn" id="pm-more">Fiche</button>${this._hp(d.back || d) ? '<button class="btn" id="pm-health">État de l\'appareil</button>' : ""}<button class="btn" id="pm-x">Fermer</button></div></div>`;
+    pop.querySelectorAll(".grng button").forEach((b) => (b.onclick = () => this._graphPop(d, +b.dataset.h)));
+    pop.querySelector("#pm-more").onclick = () => this._more(d.entity);
+    const hb = pop.querySelector("#pm-health"); if (hb) hb.onclick = () => this._healthPop(d.back || d);
+    pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; };
+    const mk = this._mk && this._mk[d.id]; if (mk) this._placePop(mk.el); else { pop.hidden = false; pop.style.left = "8px"; pop.style.top = "8px"; }
+    const box = pop.querySelector("#gbox"), token = (this._gtok = (this._gtok || 0) + 1);
+    let series, extra = null;
+    try { series = await this._hist(d.entity, hours); if (d.gust && !bin) extra = await this._hist(d.gust, hours); } catch (e) { if (token === this._gtok) box.innerHTML = '<div class="gmsg">Historique indisponible.</div>'; return; }
+    if (token !== this._gtok || !box.isConnected) return;
+    box.innerHTML = bin ? binChart(series, hours, color, st) : numChart(series, extra, hours, color, unit);
+    if (!bin) wireChart(box.querySelector("svg"), unit);
+    if (mk) this._placePop(mk.el);
   }
   /** Bilan de santé de l'appareil HA auquel appartient l'équipement (mis en cache le temps d'un rafraîchissement). */
   _hp(d) {
@@ -666,7 +776,8 @@ class PlanMaisonCard extends HTMLElement {
       ${h.reasons.length ? `<ul class="hwhy">${h.reasons.slice(0, 5).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
       <div class="hgrid">${h.metrics.slice(0, 14).map(card).join("")}</div>${ni ? `<p class="hnote">${ni} indicateur${ni > 1 ? "s ignorés" : " ignoré"} : affiché${ni > 1 ? "s" : ""} en pointillés, sans effet sur l'état ni sur « À regarder ».</p>` : ""}
       <div class="row"><button class="btn" id="pm-more">Fiche</button><button class="btn" id="pm-dev">Appareil dans Home Assistant</button><button class="btn" id="pm-x">Fermer</button></div></div>`;
-    pop.querySelectorAll(".hm").forEach((b) => (b.onclick = () => this._more(b.dataset.e)));
+    // un indicateur touché : sa courbe (retour à la fiche santé depuis la courbe)
+    pop.querySelectorAll(".hm").forEach((b) => (b.onclick = () => { const x = { id: d.id, entity: b.dataset.e, name: (b.querySelector(".k") || {}).textContent, back: d }; if (this._config.graphs !== false && this._graphable(x)) this._graphPop(x); else this._more(b.dataset.e); }));
     pop.querySelectorAll(".hig").forEach((b) => (b.onclick = (e) => {
       e.stopPropagation(); const eid = b.dataset.i, m = h.metrics.find((x) => x.eid === eid), cfgIgn = (d.health_ignore || []).includes(eid);
       this._L.hIgn = this._L.hIgn || {};
@@ -756,6 +867,7 @@ class PlanMaisonCard extends HTMLElement {
     let lit = false;
     if (this._lg) Object.entries(this._lg).forEach(([e, gs]) => { const on = (this._hass.states[e] || {}).state === "on"; lit = lit || on; gs.forEach((g) => g.classList.toggle("lit", on)); });
     this.$("glw").classList.toggle("on", lit);
+    this._liveStates();
   }
 
   /* ---------- panneau latéral ---------- */
@@ -970,6 +1082,74 @@ class PlanMaisonCard extends HTMLElement {
     pop.querySelector("#pm-x").onclick = () => { pop.hidden = true; pop.classList.remove("xl"); };
     pop.hidden = false; pop.style.left = "8px"; pop.style.top = "8px";
   }
+}
+
+/* ---------- graphiques des fiches (SVG, 300 × 120) ---------- */
+const CW = 300, CH = 120, PL = 30, PR = 6, PT = 8, PB = 18;
+function axisTicks(t0, t1, hours) {
+  const out = [], step = hours > 48 ? 864e5 : 6 * 3600e3, d = new Date(t0);
+  if (hours > 48) d.setHours(24, 0, 0, 0); else d.setHours(Math.ceil((d.getHours() + d.getMinutes() / 60) / 6) * 6, 0, 0, 0);
+  for (let t = d.getTime(); t < t1; t += step) out.push([t, hours > 48 ? new Date(t).toLocaleDateString("fr-FR", { weekday: "short" }) : new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })]);
+  return out;
+}
+function numChart(series, extra, hours, color, unit) {
+  const t1 = Date.now(), t0 = t1 - hours * 3600e3;
+  const pts = series.map(([t, v]) => [Math.max(t, t0), parseFloat(v)]).filter((p) => isFinite(p[1]));
+  if (pts.length < 2 && !pts.length) return '<div class="gmsg">Pas encore de valeurs sur cette période.</div>';
+  pts.push([t1, pts[pts.length - 1][1]]);
+  const ex = extra ? extra.map(([t, v]) => [Math.max(t, t0), parseFloat(v)]).filter((p) => isFinite(p[1])) : [];
+  if (ex.length) ex.push([t1, ex[ex.length - 1][1]]);
+  // regroupement par colonne de pixels : moyenne, minimum, maximum
+  const N = 140, B = Array.from({ length: N }, () => ({ s: 0, n: 0, lo: Infinity, hi: -Infinity }));
+  for (let i = 0; i < pts.length; i++) { const [t, v] = pts[i], k = Math.min(N - 1, Math.floor(((t - t0) / (t1 - t0)) * N)); const b = B[k]; b.s += v; b.n++; b.lo = Math.min(b.lo, v); b.hi = Math.max(b.hi, v); }
+  let last = pts[0][1]; B.forEach((b) => { if (!b.n) { b.s = last; b.n = 1; b.lo = b.hi = last; } last = b.s / b.n; });
+  const all = pts.map((p) => p[1]).concat(ex.map((p) => p[1]));
+  let lo = Math.min(...all), hi = Math.max(...all); if (hi - lo < 1e-9) { lo -= 1; hi += 1; } const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  const X = (k) => PL + ((k + 0.5) / N) * (CW - PL - PR), Y = (v) => PT + (1 - (v - lo) / (hi - lo)) * (CH - PT - PB), XT = (t) => PL + ((t - t0) / (t1 - t0)) * (CW - PL - PR);
+  const line = B.map((b, k) => `${k ? "L" : "M"}${X(k).toFixed(1)} ${Y(b.s / b.n).toFixed(1)}`).join("");
+  const band = B.map((b, k) => `${k ? "L" : "M"}${X(k).toFixed(1)} ${Y(b.hi).toFixed(1)}`).join("") + B.slice().reverse().map((b, i) => `L${X(N - 1 - i).toFixed(1)} ${Y(b.lo).toFixed(1)}`).join("") + "Z";
+  const area = line + `L${X(N - 1).toFixed(1)} ${CH - PB}L${X(0).toFixed(1)} ${CH - PB}Z`;
+  let l2 = ""; if (ex.length > 1) { const E = Array.from({ length: N }, () => -Infinity); ex.forEach(([t, v]) => { const k = Math.min(N - 1, Math.floor(((t - t0) / (t1 - t0)) * N)); E[k] = Math.max(E[k], v); }); let lv = ex[0][1]; l2 = E.map((v, k) => { if (v === -Infinity) v = lv; lv = v; return `${k ? "L" : "M"}${X(k).toFixed(1)} ${Y(v).toFixed(1)}`; }).join(""); }
+  const vals = pts.map((p) => p[1]), mn = Math.min(...vals), mx = Math.max(...vals);
+  // moyenne pondérée par la durée
+  let acc = 0; for (let i = 0; i < pts.length - 1; i++) acc += pts[i][1] * (pts[i + 1][0] - pts[i][0]); const avg = acc / (t1 - t0);
+  const yt = [lo + pad, (lo + hi) / 2, hi - pad];
+  const f = (v) => fr(Math.round(v * 10) / 10);
+  return `<svg class="gchart" viewBox="0 0 ${CW} ${CH}" style="--gc:${color}" data-t0="${t0}" data-t1="${t1}" data-n="${N}" data-v="${B.map((b) => (b.s / b.n).toFixed(3)).join(",")}" data-lo="${lo}" data-hi="${hi}">
+    ${yt.map((v) => `<line class="gg" x1="${PL}" x2="${CW - PR}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text x="${PL - 3}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${f(v)}</text>`).join("")}
+    ${axisTicks(t0, t1, hours).map(([t, l]) => `<text x="${XT(t).toFixed(1)}" y="${CH - 5}" text-anchor="middle">${l}</text>`).join("")}
+    <path class="gb" d="${band}"/><path class="ga" d="${area}"/><path class="gl" d="${line}"/>${l2 ? `<path class="gl2" d="${l2}"/>` : ""}
+    <line class="gcur" y1="${PT}" y2="${CH - PB}"/><circle class="gdot" r="3"/><text class="gtip" y="${PT + 8}"></text></svg>
+    <div class="gstats"><div>Min<b>${f(mn)} ${esc(unit)}</b></div><div>Moyenne<b>${f(avg)} ${esc(unit)}</b></div><div>Max<b>${f(mx)} ${esc(unit)}</b></div></div>${l2 ? '<div class="s">Trait plein : valeur · pointillés : rafales</div>' : ""}`;
+}
+/** Curseur : la valeur et l'heure suivent le doigt ou la souris. */
+function wireChart(svg, unit) {
+  if (!svg) return;
+  const t0 = +svg.dataset.t0, t1 = +svg.dataset.t1, N = +svg.dataset.n, V = svg.dataset.v.split(",").map(Number), lo = +svg.dataset.lo, hi = +svg.dataset.hi;
+  const cur = svg.querySelector(".gcur"), dot = svg.querySelector(".gdot"), tip = svg.querySelector(".gtip");
+  const move = (e) => {
+    const r = svg.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * CW; if (x < PL || x > CW - PR) return;
+    const k = Math.max(0, Math.min(N - 1, Math.floor(((x - PL) / (CW - PL - PR)) * N))), v = V[k], y = PT + (1 - (v - lo) / (hi - lo)) * (CH - PT - PB);
+    const t = new Date(t0 + ((k + 0.5) / N) * (t1 - t0)), hrs = t1 - t0 > 2 * 864e5;
+    cur.setAttribute("x1", x); cur.setAttribute("x2", x); dot.setAttribute("cx", x); dot.setAttribute("cy", y);
+    tip.textContent = `${fr(Math.round(v * 10) / 10)} ${unit} · ${hrs ? t.toLocaleDateString("fr-FR", { weekday: "short" }) + " " : ""}${t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    tip.setAttribute("x", Math.min(CW - PR - 2, Math.max(PL + 2, x))); tip.setAttribute("text-anchor", x > CW * 0.6 ? "end" : x < CW * 0.4 ? "start" : "middle");
+    svg.classList.add("hov");
+  };
+  svg.addEventListener("pointermove", move); svg.addEventListener("pointerdown", move); svg.addEventListener("pointerleave", () => svg.classList.remove("hov"));
+}
+/** Capteur tout ou rien (porte, présence…) : bandes « ouvert / détecté » sur la période et nombre d'ouvertures. */
+function binChart(series, hours, color, st) {
+  const t1 = Date.now(), t0 = t1 - hours * 3600e3, XT = (t) => PL + ((Math.max(t, t0) - t0) / (t1 - t0)) * (CW - PL - PR), H = 46;
+  const ch = series.filter((x, i) => !i || x[1] !== series[i - 1][1]); // seulement les changements d'état
+  const seg = []; ch.forEach(([t, v], i) => { const end = i < ch.length - 1 ? ch[i + 1][0] : t1; if (v === "on") seg.push([t, end]); });
+  const total = seg.reduce((a, [s, e]) => a + (e - Math.max(s, t0)), 0), n = seg.filter(([s]) => s >= t0).length;
+  const dc = (st && st.attributes.device_class) || "", what = ["door", "window", "opening", "garage_door"].includes(dc) ? ["Ouvertures", "Ouvert au total"] : ["Détections", "Actif au total"];
+  const dur = (ms) => { const m = Math.round(ms / 60000); return m < 60 ? m + " min" : Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0"); };
+  return `<svg class="gchart" viewBox="0 0 ${CW} ${H + 18}" style="--gc:${color}"><rect class="goff" x="${PL}" y="8" width="${CW - PL - PR}" height="${H - 16}" rx="2"/>
+    ${seg.map(([s, e]) => `<rect class="gon" x="${XT(s).toFixed(1)}" y="8" width="${Math.max(0.8, XT(e) - XT(s)).toFixed(1)}" height="${H - 16}"/>`).join("")}
+    ${axisTicks(t0, t1, hours).map(([t, l]) => `<text x="${XT(t).toFixed(1)}" y="${H + 8}" text-anchor="middle">${l}</text>`).join("")}</svg>
+    <div class="gstats"><div>${what[0]}<b>${n}</b></div><div>${what[1]}<b>${dur(total)}</b></div><div>Maintenant<b>${esc(st ? (st.state === "on" ? (what[0] === "Ouvertures" ? "Ouvert" : "Actif") : what[0] === "Ouvertures" ? "Fermé" : "Calme") : "–")}</b></div></div>`;
 }
 
 if (!customElements.get("plan-maison-card")) customElements.define("plan-maison-card", PlanMaisonCard);

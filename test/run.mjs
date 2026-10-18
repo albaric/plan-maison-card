@@ -205,6 +205,45 @@ for (const cfg of ["complete", "simple", "stub"]) {
   check("sobriété : aucune erreur JS", errs.length === 0, errs.join(" | "));
   await p.close();
 }
+{ // plan vivant : porte ouverte, présence, halo des lampes ; courbes au toucher
+  const { p, errs, c } = await open("complete");
+  const r = await p.evaluate(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), R = card.shadowRoot;
+    const set = (e, v) => { const h = card._hass; card.hass = { ...h, states: { ...h.states, [e]: { ...h.states[e], state: v } } }; };
+    const out = {};
+    const door = card._opn.find((o) => o.entity === "binary_sensor.porte_entree_contact");
+    out.doorLinked = !!door; out.doorOpen = door && door.g.classList.contains("open");
+    out.leafRot = door && door.g.querySelector(".leaf").style.transform;
+    out.winLinked = card._opn.some((o) => o.entity === "binary_sensor.baie_sejour");
+    set("binary_sensor.porte_entree_contact", "off"); await wait(50); out.doorClosed = !door.g.classList.contains("open");
+    out.occBefore = card._occ.some((o) => o.el.classList.contains("on"));
+    set("binary_sensor.ecran_mural_presence", "on"); await wait(50); out.occAfter = card._occ.some((o) => o.el.classList.contains("on"));
+    const pool = card._pools.find((q) => q.entity === "light.lampe_canape"); out.poolOn = pool && +pool.c.style.opacity > 0;
+    set("light.lampe_canape", "off"); await wait(50); out.poolOff = pool && +pool.c.style.opacity === 0;
+    // courbe : toucher le capteur de température du séjour
+    const d = card._devs().find((x) => x.entity === "sensor.sejour_temperature"); card._tap(d); await wait(400);
+    const pop = card._pop; out.chart = !!pop.querySelector("svg.gchart path.gl"); out.stats = [...pop.querySelectorAll(".gstats b")].map((b) => b.textContent);
+    pop.querySelector('.grng button[data-h="168"]').click(); await wait(400); out.week = !!pop.querySelector("svg.gchart path.gl") && pop.querySelector('.grng button[data-h="168"]').classList.contains("on");
+    const svg = pop.querySelector("svg.gchart"), b = svg.getBoundingClientRect(); svg.dispatchEvent(new PointerEvent("pointermove", { clientX: b.left + b.width * 0.6, clientY: b.top + 20, bubbles: true }));
+    out.tip = pop.querySelector(".gtip").textContent;
+    // capteur tout ou rien : bandes d'ouverture
+    card._tap(card._devs().find((x) => x.entity === "binary_sensor.porte_entree_contact")); await wait(400);
+    out.bin = pop.querySelectorAll("svg.gchart rect.gon").length; out.binStats = pop.querySelector(".gstats").textContent;
+    // une lampe reste un interrupteur
+    const before = (window.calls || []).length; card._tap(card._devs().find((x) => x.entity === "light.lampe_canape")); out.toggled = (window.calls || []).length === before + 1;
+    return out;
+  });
+  check("vivant : porte d'entrée reliée à son capteur, battant ouvert puis refermé", r.doorLinked && r.doorOpen && /rotate/.test(r.leafRot) && r.doorClosed && r.winLinked, JSON.stringify(r));
+  check("vivant : pièce éclairée quand une présence est détectée", !r.occBefore && r.occAfter, JSON.stringify({ b: r.occBefore, a: r.occAfter }));
+  check("vivant : halo de la lampe allumée, éteint avec elle", r.poolOn && r.poolOff, JSON.stringify({ on: r.poolOn, off: r.poolOff }));
+  check("courbes : capteur touché → courbe 24 h, min / moyenne / max", r.chart && r.stats.length === 3 && /°C/.test(r.stats[0]), JSON.stringify(r.stats));
+  check("courbes : passage sur 7 jours et curseur", r.week && /°C · /.test(r.tip), r.tip);
+  check("courbes : capteur d'ouverture en bandes", r.bin > 3 && /Ouvertures/.test(r.binStats), r.binStats);
+  check("courbes : une lampe se bascule toujours au toucher", r.toggled);
+  await p.screenshot({ path: `${OUT}/vivant_courbe.png` });
+  check("vivant : aucune erreur JS", errs.length === 0, errs.join(" | "));
+  await p.close();
+}
 { // sombre + bibliothèque d'icônes
   const { p, errs, c } = await open("complete", "#dark");
   await c.locator("#seg button[data-m=dev]").click(); await p.waitForTimeout(150);

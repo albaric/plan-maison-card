@@ -18,6 +18,8 @@ Tout se règle en YAML, puis s'ajuste à la souris directement sur le plan : clo
 - **Widgets météo** sur le plan : thermomètre, anémomètre (vitesse de rotation liée au vent), pluviomètre (le bocal se remplit), baromètre (aiguille), hygromètre (goutte qui se remplit selon l'humidité, couleur de sec à humide, bulles au-delà de 65 %). Ils sont choisis automatiquement selon la classe du capteur.
 - **Mobilier** illustré, un dessin par meuble : 77 meubles rangés par pièce (salon, repas, chambre, bureau, cuisine, salle de bain, jardin), avec leurs détails (vaisselle, livres, serviettes, canard dans le bain, potager, piscine, pergola en glycine…). Plans de travail, piscine, potager, haie… se redimensionnent ; canapés, lits, tapis… changent de couleur.
 - **Guirlandes lumineuses** dessinées sur le plan, qui s'allument avec leur entité.
+- **Plan vivant** : une pièce s'éclaire doucement quand un capteur de présence ou de mouvement placé dedans détecte quelqu'un ; une lampe allumée projette un halo sur le sol (sa vraie couleur et sa luminosité, arrêté par les murs) ; un capteur d'ouverture placé près d'une porte ou d'une fenêtre fait pivoter son battant sur le plan.
+- **Courbes au toucher** : toucher un capteur ouvre sa courbe sur 24 h ou 7 jours (min, moyenne, max, curseur qui suit le doigt, rafales sur l'anémomètre). Un capteur de porte ou de présence montre quand il était ouvert ou actif, et combien de fois. Les serveurs et autres appareils surveillés ouvrent toujours d'abord leur fiche santé, dont chaque indicateur ouvre sa propre courbe.
 - **Bandeau** de tuiles (météo ou autres capteurs) et panneau **« À regarder »** : équipements indisponibles, portes ouvertes, piles faibles, mises à jour, plus tes propres règles.
 - Thème clair et sombre (suit Home Assistant).
 - **Économe pour le navigateur** par défaut : seul ce dont le mouvement a un sens s'anime en continu (ventilateur, lave-linge, vent, pluie, guirlandes) ; les autres icônes s'animent quelques secondes après un changement d'état ou au survol, puis gardent leur aspect allumé. Les animations s'arrêtent quand la carte est hors de l'écran, et sont coupées si le système demande moins de mouvement. La carte ne se redessine que si une de ses entités change. Voir `animations`.
@@ -118,6 +120,8 @@ rooms:
 | `view` | calculé | Cadre visible `[x, y, largeur, hauteur]` en mètres. |
 | `theme` | `auto` | `auto`, `light` ou `dark`. |
 | `animations` | `auto` | `auto` (économe, voir plus haut), `full` (toutes les icônes, le mobilier et le voyant « en direct » animés en continu, comme avant la 1.11) ou `off` (aucune animation). |
+| `live` | `true` | `false` désactive le plan vivant (présence, halo des lampes, portes et fenêtres qui s'ouvrent). |
+| `graphs` | `true` | `false` : toucher un capteur ouvre la fiche Home Assistant au lieu de la courbe. |
 | `fonts` | `true` | `false` n'importe pas les polices Google (Barlow Condensed, Source Sans 3, JetBrains Mono). |
 | `panel` | `true` | `false` masque la vue d'ensemble (la liste « À regarder » à droite du plan). |
 | `panel_width` | auto | Largeur de la vue d'ensemble en pixels (200 à 700). Sur la carte, on peut aussi tirer le bord gauche du panneau : ce réglage est mémorisé pour chaque utilisateur, double-clic pour revenir à la valeur de la config. |
@@ -287,16 +291,6 @@ L'animation se joue quand l'équipement est allumé, ouvert ou actif. Caméras, 
 **Jardin** : `transat` Transat 🎨 · `salonjardin` Salon de jardin 🎨 · `tablejardin` Table de jardin · `parasol` Parasol 🎨 · `barbecue` Barbecue · `brasero` Brasero · `piscine` Piscine ↔ · `spa` Spa · `pergola` Pergola glycine ↔ · `potager` Potager ↔ · `massif` Massif fleuri ↔ · `lavandes` Rang de lavandes ↔ · `haie` Haie ↔ · `olivier` Olivier · `palmier` Palmier · `fruitier` Arbre fruitier · `potfleurs` Pot de fleurs 🎨 · `hamac` Hamac 🎨 · `trampoline` Trampoline · `tondeuse` Robot tondeuse · `voiture` Voiture 🎨 · `velo` Vélo 🎨
 
 ↔ redimensionnable (`w`, `h`) · 🎨 couleur au choix (`color`) : `canard`, `bleu`, `ciel`, `marine`, `sauge`, `vert`, `moutarde`, `corail`, `terracotta`, `rose`, `lavande`, `gris`, `anthracite`, `lin` ou une couleur `#rrggbb`.
-
-## Vue 3D (expérimentale)
-
-Une seconde carte, `custom:plan-maison-3d-card`, construit une maquette 3D de la maison à partir de **la même configuration** que la carte plan (copie le YAML de la carte plan et change le `type`). Les murs sont déduits des pièces, avec portes, fenêtres et portes-fenêtres, volets bleus, façade en crépi sable et toit en croupe en tuiles canal ; le mobilier, les guirlandes et les équipements sont placés comme sur le plan, y compris ce que tu as déplacé à la souris sur la carte.
-
-- Boutons : toit, murs bas (vue maison de poupée), soirée, noms des pièces, recentrer.
-- État réel : les guirlandes s'allument avec leur entité, les lampes éclairent le soir, chaque équipement est une pastille colorée selon son état ; la toucher ouvre sa fiche Home Assistant. La soirée suit `sun.sun`.
-- three.js est chargé depuis `cdn.jsdelivr.net` seulement quand cette carte est affichée ; rien n'est calculé tant que la vue ne bouge pas.
-
-Options en plus : `floors` (par id ou nom de pièce : `light`, `dark`, `brown`, `terracotta`, `wood`, `bluewood`, `concrete` ou une couleur), `colors` (`facade`, `shutters`, `roof`), `wall_height` (m, 2,6 par défaut), `roof_pitch` (0,3 par défaut), `roof: false`, `shutters: false`, `height` (hauteur de la carte, 560px par défaut).
 
 ## Développement
 

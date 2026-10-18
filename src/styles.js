@@ -57,3 +57,28 @@ export const MOTION_CSS = `
 .live i{will-change:opacity}
 @media (prefers-reduced-motion:reduce){.glw svg{animation:none!important}}
 `;
+
+/** Plan vivant : présence, halo des lampes, ouvrants reliés à un capteur, courbes au toucher. */
+export const LIVE_CSS = `
+:host{--occ:rgba(255,190,70,.2);--occ-line:rgba(230,150,30,.55);--open:#e8792b}
+:host(.dark){--occ:rgba(255,190,70,.14);--occ-line:rgba(255,190,90,.5);--open:#ff9a4d}
+.occ{fill:var(--occ);stroke:var(--occ-line);stroke-width:.6;stroke-dasharray:2 1.4;opacity:0;transition:opacity .6s;pointer-events:none}.occ.on{opacity:1}
+.pool{opacity:0;transition:opacity .8s;pointer-events:none;mix-blend-mode:multiply}:host(.dark) .pool{mix-blend-mode:screen}
+.opn{pointer-events:none}.opn .leaf{stroke:var(--open);stroke-width:.7;stroke-linecap:round;opacity:0;transform-box:view-box;transition:transform .7s cubic-bezier(.3,.7,.3,1),opacity .3s}
+.opn .arc{fill:none;stroke:var(--open);stroke-width:.3;stroke-dasharray:1 .8;opacity:0;transition:opacity .5s .2s}
+.opn .gap{fill:var(--open);opacity:0;transition:opacity .5s}
+.opn.open .leaf{opacity:1}.opn.open .arc{opacity:.8}.opn.open .gap{opacity:.45}
+.hide-dev .occ,.hide-dev .pool,.hide-dev .opn{display:none}
+.gsheet{display:flex;flex-direction:column;gap:8px}
+.ghead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gnow{font-family:var(--f-mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}.gnow small{font-size:12px;color:var(--ink-2);margin-left:2px}
+.grng{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex:none}.grng button{font:inherit;font-size:12.5px;border:0;background:none;color:var(--ink-2);padding:3px 10px;cursor:pointer}.grng button.on{background:var(--ink);color:var(--surface)}
+.gchart{width:100%;height:auto;display:block;touch-action:pan-y;cursor:crosshair}
+.gchart .ga{fill:var(--gc,#3e7bfa);opacity:.14}.gchart .gb{fill:var(--gc,#3e7bfa);opacity:.12}.gchart .gl{fill:none;stroke:var(--gc,#3e7bfa);stroke-width:1.6;stroke-linejoin:round}.gchart .gl2{fill:none;stroke:var(--ink-2);stroke-width:1.1;stroke-dasharray:3 2}
+.gchart .gg{stroke:var(--line);stroke-width:.6}.gchart text{font-family:var(--f-mono);font-size:8.5px;fill:var(--ink-2)}
+.gchart .gon{fill:var(--gc,#e8792b);opacity:.75}.gchart .goff{fill:var(--line)}
+.gchart .gcur{stroke:var(--ink);stroke-width:.8;opacity:0}.gchart .gdot{fill:var(--gc,#3e7bfa);stroke:var(--surface);stroke-width:1.2;opacity:0}.gchart .gtip{font-size:9.5px;fill:var(--ink);font-weight:600;opacity:0}
+.gchart.hov .gcur,.gchart.hov .gdot,.gchart.hov .gtip{opacity:1}
+.gstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);font-size:12px}.gstats div{background:var(--surface);padding:4px 8px}.gstats b{display:block;font-family:var(--f-mono);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.gmsg{font-size:12.5px;color:var(--ink-2);padding:20px 0;text-align:center}
+`;
