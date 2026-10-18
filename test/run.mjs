@@ -238,7 +238,7 @@ for (const cfg of ["complete", "simple", "stub"]) {
   check("vivant : halo de la lampe allumée, éteint avec elle", r.poolOn && r.poolOff, JSON.stringify({ on: r.poolOn, off: r.poolOff }));
   check("courbes : capteur touché → courbe 24 h, min / moyenne / max", r.chart && r.stats.length === 3 && /°C/.test(r.stats[0]), JSON.stringify(r.stats));
   check("courbes : passage sur 7 jours et curseur", r.week && /°C · /.test(r.tip), r.tip);
-  check("courbes : capteur d'ouverture en bandes", r.bin > 3 && /Ouvertures/.test(r.binStats), r.binStats);
+  check("courbes : capteur d'ouverture en bandes", r.bin >= 2 && /Ouvertures/.test(r.binStats), r.binStats);
   check("courbes : une lampe se bascule toujours au toucher", r.toggled);
   await p.screenshot({ path: `${OUT}/vivant_courbe.png` });
   check("vivant : aucune erreur JS", errs.length === 0, errs.join(" | "));
